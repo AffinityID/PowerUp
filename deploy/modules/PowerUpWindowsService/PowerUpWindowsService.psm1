@@ -167,7 +167,7 @@ function Set-Service
 		& "$PSScriptRoot\InstallUtil.exe" "$InstallPath\$ExeFileName" /LogToConsole=true
 	}
 	catch{
-		throw "Could not uninstall $Name Service"
+		throw "Could not install $Name Service"
 	}
 	
 }

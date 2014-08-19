@@ -53,12 +53,16 @@ function DeleteAppPool($appPoolName)
 
 function DeleteWebsite($websiteName)
 {	
-	if (WebItemExists $sitesPath $websiteName)
+	if (WebsiteExists $websiteName)
 	{
 		Remove-WebSite $websiteName
 	}
 }
 
+function WebsiteExists($websiteName)
+{	
+	return WebItemExists $sitesPath $websiteName
+}
 
 function SetAppPoolManagedPipelineMode($appPool, $pipelineMode)
 {
@@ -228,11 +232,23 @@ function Uninstall-WebSite($websiteName)
 	DeleteWebsite $websiteName
 }
 
-function set-WebSite($websiteName, $appPoolName, $fullPath, $hostHeader, $protocol="http", $ip="*", $port="80")
+function set-WebSite($websiteName, $appPoolName, $fullPath, $hostHeader, $protocol="http", $ip="*", $port="80", $skipIfExists = $false)
 {
-	write-host "Recreating website $websiteName with path $fullPath, app pool $apppoolname, bound to to host header $hostHeader with IP $ip, port $port over $protocol"
-	DeleteWebsite $websiteName
-	CreateWebsite $websiteName $appPoolName $fullPath $protocol $ip $port $hostHeader
+    if (WebsiteExists $websiteName)
+    {
+        if ($skipIfExists)
+        {
+            write-host "Website $websiteName already exists, skipping."
+            return;
+        }	
+        else
+        {
+            DeleteWebsite $websiteName
+        }
+    }	
+	
+    write-host "Recreating website $websiteName with path $fullPath, app pool $apppoolname, bound to to host header $hostHeader with IP $ip, port $port over $protocol"
+    CreateWebsite $websiteName $appPoolName $fullPath $protocol $ip $port $hostHeader
 }
 
 function set-SelfSignedSslCertificate($certName)
@@ -254,12 +270,21 @@ function EnsureSelfSignedSslCertificate($certName)
 
 function Set-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80")
 {
-	$existingBinding = get-webbinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader
-	
-	if(!$existingBinding)
-	{
-		new-websitebinding $websiteName $hostHeader $protocol $ip $port 
-	}
+    if ($hostHeader -eq "" -or $hostHeader -eq "*") {
+        #temporary special case to handle bindings with blank host header.
+        try {
+            new-websitebinding $websiteName $hostHeader $protocol $ip $port 
+        } catch {
+            $_
+        }
+    } else {
+        $existingBinding = get-webbinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader    
+        
+        if(!$existingBinding) {
+            new-websitebinding $websiteName $hostHeader $protocol $ip $port 
+        }        
+    }
+    
 }
 
 function New-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80")
@@ -289,12 +314,23 @@ function Set-SslBinding($certName, $ip, $port)
 	}
 }
 
+function Register-VirtualDirectory($websiteName, $subPath, $physicalPath)
+{
+    $virtualPath = "$sitesPath\$websiteName\$subPath"
+    if (Test-Path $virtualPath) {
+        Remove-Item $virtualPath -Recurse
+    }    
+    
+    Write-Host "Adding virtual directory $subPath to web site $websiteName pointing to $physicalPath"
+    New-Item $virtualPath -physicalPath $physicalPath -type VirtualDirectory 
+}
+
 function new-virtualdirectory($websiteName, $subPath, $physicalPath)
 {
+    Write-Warning "Command new-virtualdirectory is obsolete, use Register-VirtualDirectory instead."
 	write-host "Adding virtual directory $subPath to web site $websiteName pointing to $physicalPath"
 	New-Item $sitesPath\$websiteName\$subPath -physicalPath $physicalPath -type VirtualDirectory 
 }
-
 
 function new-webapplication($websiteName, $appPoolName, $subPath, $physicalPath)
 {
@@ -374,4 +410,64 @@ function End-WebChangeTransaction()
 	return End-WebCommitDelay
 }
 
-export-modulemember -function set-webapppool32bitcompatibility, set-apppoolidentitytouser, set-apppoolidentityType, set-apppoolstartMode, new-webapplication, new-virtualdirectory, start-apppoolandsite, start-apppool, start-site, stop-apppool, stop-apppoolandsite, set-website, uninstall-website, set-webapppool, uninstall-webapppool,set-websitebinding, New-WebSiteBinding, New-WebSiteBindingNonHttp, set-SelfSignedSslCertificate, set-sslbinding, Set-WebsiteForSsl, set-property, set-webproperty, Begin-WebChangeTransaction, End-WebChangeTransaction
+function Try-WebRequest([string]$url)
+{
+  function FullStatusCode($response) {
+    return "$([int]$response.StatusCode) $($response.StatusDescription)";
+  }
+
+  write-host "Requesting '$($url)'" -nonewline
+  $request = [system.Net.WebRequest]::Create($url)
+  $request.Timeout = 10 * 60 * 1000 # 10 minutes
+  try {
+    $response = $request.GetResponse()
+  }
+  catch [System.Net.WebException] {
+    $response = $_.Exception.Response
+    if ($response -eq $null) {
+      throw;
+    }
+    
+    $stream = $response.GetResponseStream()
+    $reader = new-object System.IO.StreamReader($stream)
+    $error = $reader.ReadToEnd();
+    
+    write-host ": $(FullStatusCode($response))"
+    throw "Request to $url failed ($(FullStatusCode($response))): $error"
+  }
+  finally {
+    if ($response -ne $null) {
+      $response.Close();
+    }
+  }
+   
+  write-host ": $(FullStatusCode($response))" -foregroundcolor green
+}
+
+export-modulemember -function set-webapppool32bitcompatibility,
+                               set-apppoolidentitytouser,
+                               set-apppoolidentityType,
+                               set-apppoolstartMode,
+                               new-webapplication,
+                               new-virtualdirectory,
+                               Register-VirtualDirectory,
+                               start-apppoolandsite,
+                               start-apppool,
+                               start-site,
+                               stop-apppool,
+                               stop-apppoolandsite,
+                               set-website,
+                               uninstall-website,
+                               set-webapppool,
+                               uninstall-webapppool,
+                               set-websitebinding,
+                               New-WebSiteBinding,
+                               New-WebSiteBindingNonHttp,
+                               set-SelfSignedSslCertificate,
+                               set-sslbinding,
+                               Set-WebsiteForSsl,
+                               set-property,
+                               set-webproperty,
+                               Begin-WebChangeTransaction,
+                               End-WebChangeTransaction,
+                               Try-WebRequest

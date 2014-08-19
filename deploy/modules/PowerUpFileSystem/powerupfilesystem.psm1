@@ -64,10 +64,36 @@ function Write-FileToConsole([string]$fileName)
 	}
 	else
 	{
-	   write-host "Source file ($fileName) does not exist." 
+	   write-host "Source file ($fileName) dose not exist." 
+	}
+}
+
+function CreateFile([string]$filePath)
+{
+    Write-Warning "CreateFile is obsolete, just use New-Item instead."
+	if (Test-Path $filePath)
+	{
+		Write-Host "The file $filePath already exists"
+	}
+	else{
+		New-Item $filePath -type file
+		Write-Host "The file $filePath has been created"
+	}
+}
+
+function DeleteFile([string]$filePath)
+{
+    Write-Warning "DeleteFile is obsolete, just use Remove-Item instead."
+	if (!(Test-Path $filePath))
+	{
+		Write-Host "The file $filePath dose not exist"
+	}
+	else{
+		Remove-Item $filePath -recurse
+		Write-Host "The file $filePath has been deleted"
 	}
 }
 
 Set-Alias Copy-Directory RobocopyDirectory
 
-Export-ModuleMember -function Write-FileToConsole, Ensure-Directory, Copy-MirroredDirectory, RobocopyDirectory -alias Copy-Directory
+Export-ModuleMember -function Write-FileToConsole, Ensure-Directory, Copy-MirroredDirectory, CreateFile, DeleteFile, RobocopyDirectory -alias Copy-Directory

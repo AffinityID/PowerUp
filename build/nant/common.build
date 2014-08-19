@@ -6,6 +6,7 @@
 	<tstamp property="build.date" pattern="yyyyMMdd-HHmm" verbose="true" />
 	<property name="build.verbosity" value="Normal" unless="${property::exists('build.verbosity')}"  />
 	<property name="build.vcs.number" value="0" />
+	<property name="solution.msbuild" value="true" unless="${property::exists('solution.msbuild')}" />
 	<property name="solution.name" value="${project::get-name()}" unless="${property::exists('solution.name')}" />
 	<property name="solution.extension" value="sln" unless="${property::exists('solution.extension')}" />
 	<property name="solution.dir" value="${project::get-base-directory()}"  unless="${property::exists('solution.dir')}"/>
@@ -13,11 +14,15 @@
 	<property name="package.name" value="${solution.name}" unless="${property::exists('package.name')}" />
 	<property name="package.dir" value="${solution.dir}\_package" />
 
-	<target name="build-package-common" depends="clean compile-solution package-project copy-build-files create-package-info zip-package" />
+	<target name="build-package-common" depends="whoami clean compile-solution package-project copy-build-files create-package-info zip-package" />
 
+  <target name="whoami">
+    <echo message="Nant build running as:" />
+    <exec workingdir="${solution.dir}" program="whoami" />
+  </target>  
+  
 	<target name="clean">
 		<call target="clean-package"/>
-	
 	</target>
 
 	<target name="clean-package">
@@ -25,7 +30,7 @@
 		<mkdir dir="${package.dir}" />
 	</target>
 	
-	<target name="compile-solution">
+	<target name="compile-solution" if="${solution.msbuild}">
 		<msbuild project="${solution.dir}\${solution.name}.${solution.extension}" verbosity="${build.verbosity}">
 			<arg value="/property:Configuration=${build.configuration}" />
 			<arg value="/property:Platform=${build.platform}" />
