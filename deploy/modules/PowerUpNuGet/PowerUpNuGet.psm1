@@ -67,10 +67,15 @@ function Get-AttributeValue(
 
 function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
-    [Parameter(Mandatory=$true)][string] $outputDirectory
+    [Parameter(Mandatory=$true)][string] $outputDirectory,
+    [string] $options
 ) {
-    Write-Host "$nuget pack $nuspecPath -outputdirectory $outputDirectory"
-    &$nuget pack $nuspecPath -outputdirectory $outputDirectory
+    $packCmd = "$nuget pack $nuspecPath -outputdirectory $outputDirectory"
+    if ($options) {
+        $packCmd += " " + $options
+    }
+    Write-Host $packCmd
+    Invoke-Expression $packCmd
 }
 
 function Send-NuGetPackage(

@@ -1,10 +1,1 @@
-
-/_package
-*.suo
-/SimpleWebsite/obj
-/SimpleWebsite/bin
-/PowershellExtensions/Tests/bin
-/PowershellExtensions/Tests/obj
-/PowershellExtensions/PowershellExtensions/bin
-/PowershellExtensions/PowershellExtensions/obj
-/PowershellExtensions/PowershellExtensions.5.1.ReSharper.user
+/_*

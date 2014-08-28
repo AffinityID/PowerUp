@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>PowerUp</id>
+    <version>$version$</version>
+    <authors>Affinity Id</authors>
+    <owners>Affinity Id</owners>
+    <projectUrl>https://github.com/AffinityID/PowerUp.git</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Deployment utility based on PSake.</description>
+    <releaseNotes />
+    <copyright />
+    <tags>Deployment PowerShell PSake</tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+</package>
