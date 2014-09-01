@@ -39,7 +39,7 @@ function Invoke-Combo-StandardWindowsService($options)
 		copy-mirroreddirectory $options.fullsourcepath $options.fulldestinationpath
 	}
 	
-	Set-Service $options.servicename $options.fulldestinationpath $options.exename
+	Install-Service $options.servicename (Join-Path $options.fulldestinationpath $options.exename)
 	
 	if ($options.serviceaccountusername)
 	{
@@ -60,9 +60,28 @@ function Invoke-Combo-StandardWindowsService($options)
 	
 		Set-ServiceFailureOptions $options.servicename $options.failureoptionsresetfailurecountafterdays "restart" $options.failureoptionsresetdelayminutes
 	}
-	
-	if (!$options.donotstartimmediately)
-	{
-		start-service $options.servicename
-	}
+
+    if ($options.donotstartimmediately)
+    {
+        return;
+    }
+
+    try
+    {
+        Start-Service $options.servicename
+    }
+    catch
+    {
+        Write-Error "Failed to start service $($options.servicename): $_" -ErrorAction Continue
+        $logs = (Get-EventLog Application -Source $options.servicename -ErrorAction SilentlyContinue | Select-Object -First 5)
+        if ($logs) {
+            Write-Host "Recent Application event logs for $($options.servicename):"
+            $logs | % {                
+                Write-Host "$($_.TimeGenerated) $($_.EntryType)" -ForegroundColor DarkMagenta
+                Write-Host $_.Message
+                Write-Host ""
+            }
+        }
+        throw
+    }
 }

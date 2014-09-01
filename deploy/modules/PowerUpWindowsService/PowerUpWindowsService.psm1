@@ -83,14 +83,21 @@ function Get-SpecificService
         [string] $Name = $(throw 'Must provide a service name')
     )
 	
+	Write-Warning "Get-SpecificService is obsolete, use Get-MaybeNonExistingService instead."
 	return Get-Service | Where-Object {$_.Name -eq $Name}
+}
+
+# TODO: Better name?
+function Get-MaybeNonExistingService([Parameter(Mandatory=$true)][string] $name)
+{
+    # http://stackoverflow.com/questions/4967496/check-if-a-windows-service-exists-and-delete-in-powershell#17177020
+    return Get-Service "$name*" -Include $name
 }
 
 # TODO: Better name?
 function Stop-MaybeNonExistingService([Parameter(Mandatory=$true)][string] $name)
 {
-    $serviceExists = (Get-Service | ? {$_.Name -eq $name})
-
+    $serviceExists =  Get-MaybeNonExistingService $name
     if ($serviceExists)
     {
         Write-Host "Service $name exists, stopping."
@@ -102,6 +109,7 @@ function Stop-MaybeNonExistingService([Parameter(Mandatory=$true)][string] $name
     }
 }
 
+# TODO: Do we actually need to start non-existing services?
 function Start-MaybeNonExistingService
 {
 	param
@@ -126,8 +134,7 @@ function Start-MaybeNonExistingService
 
 function Uninstall-Service([Parameter(Mandatory=$true)][string]$name)
 {
-    $service = get-wmiobject -query "select * from win32_service where name='$name'"
-      
+    $service = Get-WmiObject -Query "select * from Win32_Service where Name='$name'"
     if ($service)
     {
         Write-Host "Service $name is installed, starting uninstall:"
@@ -156,13 +163,14 @@ function Set-Service
 		[string] $ExeFileName = $(throw 'Must provide a service name')
     ) 
 
-	uninstall-service $Name $InstallPath $ExeFileName
-		
-	try{
-		& "$PSScriptRoot\InstallUtil.exe" "$InstallPath\$ExeFileName" /LogToConsole=true
-	}
-	catch{
-		throw "Could not install $Name Service"
-	}
-	
+    Write-Warning "Set-Service is obsolete, use Install-Service instead."
+    Install-Service $Name "$InstallPath\$ExeFileName"
+}
+
+function Install-Service(
+    [Parameter(Mandatory=$true)][string]$name,
+    [Parameter(Mandatory=$true)][string]$path
+) {
+    Uninstall-Service $name
+    &"$PSScriptRoot\InstallUtil.exe" $path /LogToConsole=true
 }
