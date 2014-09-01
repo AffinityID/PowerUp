@@ -1,3 +1,6 @@
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
 function Set-ServiceCredentials
 {
     param
@@ -82,29 +85,21 @@ function Get-SpecificService
 	
 	return Get-Service | Where-Object {$_.Name -eq $Name}
 }
-	
-	
-	
-function Stop-MaybeNonExistingService
+
+# TODO: Better name?
+function Stop-MaybeNonExistingService([Parameter(Mandatory=$true)][string] $name)
 {
-	param
-    (
-        [string] $Name = $(throw 'Must provide a service name')
-    ) 
+    $serviceExists = (Get-Service | ? {$_.Name -eq $name})
 
-	$serviceExists = !((Get-Service | Where-Object {$_.Name -eq $Name}) -eq $null)
-	
-	if ($serviceExists) {
-		Write-Host "$Name Service is installed"
-		
-		Write-Host "Stopping $Name"
-		Stop-Service $Name		
-	}
-	else
-	{
-		Write-Host "$Name Service is not installed, so cannot be stopped"
-	}
-
+    if ($serviceExists)
+    {
+        Write-Host "Service $name exists, stopping."
+        Stop-Service $name
+    }
+    else
+    {
+        Write-Host "Service $name does not exist, so it cannot be stopped."
+    }
 }
 
 function Start-MaybeNonExistingService
@@ -129,27 +124,27 @@ function Start-MaybeNonExistingService
 
 }
 
-function Uninstall-Service 
+function Uninstall-Service([Parameter(Mandatory=$true)][string]$name)
 {
-	param
-	(
-		[string] $Name = $(throw 'Must provide a service name')
-	) 
+    $service = get-wmiobject -query "select * from win32_service where name='$name'"
+      
+    if ($service)
+    {
+        Write-Host "Service $name is installed, starting uninstall:"
 
-	$service = get-wmiobject -query "select * from win32_service where name='$Name'"
-		
-	if ($service) {
-		Write-Host "$Name Service is installed"
-		
-		Write-Host "Uninstalling $Name"
-
-		try{
-			& "$PSScriptRoot\InstallUtil.exe" $service.pathname /u /LogToConsole=true
-		}
-		catch{
-			throw "Could not uninstall $Name Service"
-		}		
-	}
+        Write-Host "  1. Ensuring service is stopped."
+        Stop-Service $name
+        
+        Write-Host "  2. Killing any open 'Services' windows to free service handles."
+        taskkill /fi "windowtitle eq Services"
+        
+        Write-Host "  3. Uninstalling service $name."
+        &"$PSScriptRoot\InstallUtil.exe" $service.pathname /u /LogToConsole=true
+    }
+    else
+    {
+        Write-Host "Service $name is not installed, uninstall is not needed."
+    }
 }
 
 function Set-Service
