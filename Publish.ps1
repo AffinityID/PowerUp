@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory=$true)][string] $server,
     [int] $buildNumber = 0
 )
-$version = "0.99.$buildNumber"
+$version = "0.9.$buildNumber"
 
 Remove-Item -Recurse .\_output
 
