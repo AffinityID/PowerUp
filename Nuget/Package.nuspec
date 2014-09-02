@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>PowerUp</id>
+    <id>AffinityId.PowerUp</id>
     <version>$version$</version>
     <authors>Affinity Id</authors>
     <owners>Affinity Id</owners>
