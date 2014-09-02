@@ -1,3 +1,6 @@
-Import-Module $PSScriptRoot\..\PowerUp\Deploy\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
+Set-StrictMode -Version 2
+$scriptRoot =  Split-Path -Parent $MyInvocation.MyCommand.Path
 
-Copy-Directory $PSScriptRoot\..\PowerUp .\_powerup
+Import-Module $scriptRoot\..\PowerUp\Deploy\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
+
+Copy-Directory $scriptRoot\..\PowerUp .\_powerup
