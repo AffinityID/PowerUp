@@ -27,10 +27,11 @@ function Invoke-Combo-StandardWebsite($options)
             
             return [WebsiteCopyMode]::Default
         };
+        beforecopy = { {} };
         destinationfolder = { $options.websitename };
         sourcefolder = { $options.destinationfolder };
         fulldestinationpath = { "$($options.webroot)\$($options.destinationfolder)" };
-        fullsourcepath = { "$(get-location)\$($options.sourcefolder)" };
+        fullsourcepath = { "$(get-location)\$($options.sourcefolder)" };        
         apppool = @{
             executionmode = "Integrated";
             dotnetversion = "v4.0";
@@ -101,7 +102,9 @@ function Invoke-Combo-StandardWebsite($options)
         Write-Host "Backing up $($pathArray) to $($options.backup.location)\code.zip"
         Write-Zip -Path $pathArray -OutputPath "$($options.backup.location)\code.zip" -IncludeEmptyDirectories -Level 1
     }
-    
+
+    &($options.beforecopy)
+
     $copymode = [WebsiteCopyMode]$options.copymode
     switch ($copymode) {
         'Default'  { copy-mirroreddirectory $options.fullsourcepath $options.fulldestinationpath; break }
