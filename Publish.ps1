@@ -14,6 +14,6 @@ Import-Module .\PowerUpCore\PowerUp\Modules\PowerUpNuGet\PowerUpNuGet.psm1
 
 Copy-Directory .\PowerUpCore .\_output\PowerUpCore
 
-#Update-NuGet
+Update-NuGet
 New-NuGetPackage ".\_output\PowerUpCore\Package.nuspec" ".\_output" "-Version $version -NoPackageAnalysis"
-#Send-NuGetPackage ".\_output\*.nupkg" $server
+Send-NuGetPackage ".\_output\*.nupkg" $server
