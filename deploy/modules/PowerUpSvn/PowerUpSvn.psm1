@@ -73,7 +73,7 @@ function Remove-SvnItem(
         $args = New-SvnArgs SharpSvn.SvnDeleteArgs $message
         if (!$pathUri)
         {
-            Write-Host "Deleting local '$path' from SVN."
+            Write-Host "Deleting local '$path' from SVN working copy."
             $client.Delete($path, $args) | Out-Null
         }
         else
@@ -102,7 +102,7 @@ function Copy-SvnItem(
         $args = New-SvnArgs SharpSvn.SvnCopyArgs $message
         if (!$pathUri)
         {
-            Write-Host "Copying local '$path' to '$destinationPath' in SVN."
+            Write-Host "Copying local '$path' to '$destinationPath' in SVN working copy."
             $source = New-Object SharpSvn.SvnPathTarget($path)
             $client.Copy($source, $destinationPath, $args)  | Out-Null
         }
