@@ -1,18 +1,19 @@
 param(
     [Parameter(Mandatory=$true)][string] $server,
-    [int] $buildNumber = 0
+    [int] $buildNumber = 0,
+    [string] $outputPath = ".\_output"
 )
 $version = "0.9.$buildNumber"
 
-Remove-Item -Recurse .\_output
+if (Test-Path $outputPath) {
+    Remove-Item -Recurse $outputPath
+}
 
-Import-Module .\deploy\modules\PowerUpFileSystem\PowerUpFileSystem.psm1
-Import-Module .\deploy\modules\PowerUpNuGet\PowerUpNuGet.psm1
+Import-Module .\PowerUpCore\PowerUp\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
+Import-Module .\PowerUpCore\PowerUp\Modules\PowerUpNuGet\PowerUpNuGet.psm1
 
-Copy-Directory .\Nuget .\_output\PowerUpPackage
-Copy-Directory .\Build .\_output\PowerUpPackage\PowerUp\Build
-Copy-Directory .\Deploy .\_output\PowerUpPackage\PowerUp\Deploy
+Copy-Directory .\PowerUpCore .\_output\PowerUpCore
 
 Update-NuGet
-New-NuGetPackage ".\_output\PowerUpPackage\Package.nuspec" ".\_output" "-Version $version -NoPackageAnalysis"
+New-NuGetPackage ".\_output\PowerUpCore\Package.nuspec" ".\_output" "-Version $version -NoPackageAnalysis"
 Send-NuGetPackage ".\_output\*.nupkg" $server
