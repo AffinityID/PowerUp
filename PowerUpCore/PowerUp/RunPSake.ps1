@@ -4,6 +4,8 @@ param(
     [string] $task = "default"
 )
 
+$ExitCode = 0;
+
 Set-StrictMode -Version 2
 Write-Host "Executing under account $env:username"
 $ErrorActionPreference='Stop'
@@ -21,3 +23,11 @@ Write-Host "Invoking PSake with the following:
 
 Import-Module PowerUpPsake\PSake
 Invoke-PSake $operationFile $task -Framework 4.0x64 -Parameters @{ "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
+
+if (-not $PSake.build_success) {
+    $host.ui.WriteErrorLine("Build Failed!")
+    $ExitCode = 1
+}
+else {
+    $ExitCode = $LastExitCode
+}
