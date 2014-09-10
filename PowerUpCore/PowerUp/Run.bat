@@ -1,7 +1,6 @@
 @echo off
 
 if '%1' == '' goto USAGE
-if '%2' == '' goto USAGE
 
 :RUN
 	set policyCmd=$execPolicy = Get-ExecutionPolicy; if (!($execPolicy -eq 'Unrestricted')) { Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process }

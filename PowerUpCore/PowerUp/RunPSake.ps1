@@ -12,12 +12,12 @@ Write-Host "Importing PowerUp modules"
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
 $env:PSModulePath = $env:PSModulePath + ";$scriptPath\Modules\" + ";$scriptPath\Combos\"
 
-$operationFile = $operation + ".ps1"
+$operationFile = ".\" + $operation + ".ps1"
 Write-Host "Invoking PSake with the following:
     Operation: $operation
     OperationFile: $operationFile
     OperationProfile: $operationProfile
     Task: $task"
 
-Import-Module PSake
-Invoke-PSake $operation $task -parameters @{ "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
+Import-Module PowerUpPsake\PSake
+Invoke-PSake $operationFile $task -parameters @{ "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
