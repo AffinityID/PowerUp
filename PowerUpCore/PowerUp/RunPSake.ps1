@@ -20,4 +20,4 @@ Write-Host "Invoking PSake with the following:
     Task: $task"
 
 Import-Module PowerUpPsake\PSake
-Invoke-PSake $operationFile $task -parameters @{ "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
+Invoke-PSake $operationFile $task -Framework 4.0x64 -Parameters @{ "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
