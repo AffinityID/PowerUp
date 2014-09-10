@@ -14,9 +14,15 @@ function Compress-ZipFile(
 }
 
 function Expand-ZipFile(
-    [Parameter(Mandatory=$true)][string] $sourceZip
+    [Parameter(Mandatory=$true)][string] $sourceZip,
+    [switch] $force
 ) {
-    $cmd = "$zipExe x $sourceZip"
+    $cmd = "$zipExe x "
+    if ($force) {
+        $cmd += "-y "
+    }
+    $cmd += "$sourceZip"
+    
     Write-Host $cmd
     Invoke-Expression $cmd
 }
