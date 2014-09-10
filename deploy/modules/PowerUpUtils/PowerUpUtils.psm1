@@ -1,4 +1,5 @@
 Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
 
 function Merge-Defaults($target, $defaults)
 {
@@ -47,4 +48,19 @@ function Merge-Defaults($target, $defaults)
     }
 }
 
-Export-ModuleMember -function Merge-Defaults
+function Use-Object(
+    [Parameter(Mandatory=$true)][IDisposable]$object,
+    [Parameter(Mandatory=$true)][ScriptBlock]$action
+)
+{
+    try
+    {
+        &$action $object
+    }
+    finally
+    {
+        $object.Dispose();
+    }
+}
+
+Export-ModuleMember -function Merge-Defaults, Use-Object

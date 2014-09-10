@@ -1,3 +1,5 @@
+Set-StrictMode -Version 2
+$ErrorActionPreference = "Stop"
 
 function Ensure-Directory([string]$directory)
 {
@@ -94,6 +96,24 @@ function DeleteFile([string]$filePath)
 	}
 }
 
+function Grant-PathFullControl(
+    [Parameter(Mandatory=$true)][string] $path,
+    [Parameter(Mandatory=$true)][string] $user
+)
+{
+    Write-Host "Granting full control of $path to $user."
+    $acl = Get-Acl $path
+    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+    $acl.SetAccessRule($rule)
+    Set-Acl $path $acl
+}
+
 Set-Alias Copy-Directory RobocopyDirectory
 
-Export-ModuleMember -function Write-FileToConsole, Ensure-Directory, Copy-MirroredDirectory, CreateFile, DeleteFile, RobocopyDirectory -alias Copy-Directory
+Export-ModuleMember -function Write-FileToConsole,
+                               Ensure-Directory,
+                               Copy-MirroredDirectory,
+                               Grant-PathFullControl,
+                               CreateFile,
+                               DeleteFile,
+                               RobocopyDirectory -alias Copy-Directory
