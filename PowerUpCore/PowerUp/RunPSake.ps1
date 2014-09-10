@@ -31,3 +31,6 @@ if (-not $PSake.build_success) {
 else {
     $ExitCode = $LastExitCode
 }
+
+Write-Host "Exiting with exit code: $ExitCode"
+exit $ExitCode
