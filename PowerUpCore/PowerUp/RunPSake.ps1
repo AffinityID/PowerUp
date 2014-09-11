@@ -11,8 +11,10 @@ Write-Host "Executing under account $env:username"
 $ErrorActionPreference='Stop'
 
 Write-Host "Importing PowerUp modules"
-$scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
-$env:PSModulePath = $env:PSModulePath + ";$scriptPath\Modules\" + ";$scriptPath\Combos\"
+$parentPath = Split-Path -parent $MyInvocation.MyCommand.Definition
+Get-ChildItem "$parentPath\..\..\*" -Include 'Modules','Combos' -Recurse | sort Name | % {
+    $env:PSModulePath += ";$($_.FullName)\"
+}
 
 $operationFile = ".\" + $operation + ".ps1"
 Write-Host "Invoking PSake with the following:
@@ -28,7 +30,7 @@ if (-not $PSake.build_success) {
     $host.ui.WriteErrorLine("Build Failed!")
     $ExitCode = 1
 }
-else {
+elseif (Test-Path variable:LastExitCode) {
     $ExitCode = $LastExitCode
 }
 
