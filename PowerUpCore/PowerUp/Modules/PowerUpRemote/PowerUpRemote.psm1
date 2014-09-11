@@ -10,25 +10,25 @@ function invoke-remotetasks(
 	copy-package $servers $packageName
 	
 	foreach ($server in $servers)
-	{			
+	{
 		if (!$remoteexecutiontool)
-		{		
+		{
 			if ($server.ContainsKey('remote.task.execution.remoteexecutiontool'))
 			{
 				$remoteexecutiontool = $server['remote.task.execution.remoteexecutiontool'][0]
 				$remoteexecutiontool = 'psexec'
-			}			
+			}
 		}
-				
+
 		if ($remoteexecutiontool -eq 'psremoting')
 		{
-			invoke-remotetaskwithremoting $tasks $server $deploymentEnvironment $packageName
+			invoke-remotetaskwithremoting $operation $tasks $server $deploymentEnvironment $packageName
 		}
 		else
 		{
-			invoke-remotetaskwithpsexec $tasks $server $deploymentEnvironment $packageName
-		}	
-	}	
+			invoke-remotetaskwithpsexec $operation $tasks $server $deploymentEnvironment $packageName
+		}
+	}
 }
 
 
