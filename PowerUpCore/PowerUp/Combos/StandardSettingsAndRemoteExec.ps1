@@ -25,7 +25,7 @@ function getPlainTextSettings($parameter, $fileName)
 	get-parsedsettings $fullFilePath $parameter
 }
 
-function run($task, $servers, $remoteWorkingSubFolder = $null)
+function run($operation, $task, $servers, $remoteWorkingSubFolder = $null)
 {
 	import-module powerupremote	
 	$currentPath = Get-Location
@@ -35,7 +35,7 @@ function run($task, $servers, $remoteWorkingSubFolder = $null)
 		$remoteWorkingSubFolder = ${package.name}
 	}
 	
-	invoke-remotetasks $task $servers ${deployment.profile} $remoteWorkingSubFolder $serverSettingsScriptBlock
+	invoke-remotetasks $operation $task $servers ${deployment.profile} $remoteWorkingSubFolder $serverSettingsScriptBlock
 }
 
 

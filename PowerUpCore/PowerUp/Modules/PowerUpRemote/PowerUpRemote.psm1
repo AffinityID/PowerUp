@@ -1,5 +1,8 @@
 
-function invoke-remotetasks($tasks, $serverNames, $deploymentEnvironment, $packageName, $settingsFunction, $remoteexecutiontool=$null)
+function invoke-remotetasks(
+    [Parameter(Mandatory = $true)][string] $operation,
+    $tasks, $serverNames, $deploymentEnvironment, $packageName, $settingsFunction, $remoteexecutiontool=$null
+)
 {
 	$currentLocation = get-location
 	$servers = get-serversettings $settingsFunction $serverNames
@@ -7,54 +10,63 @@ function invoke-remotetasks($tasks, $serverNames, $deploymentEnvironment, $packa
 	copy-package $servers $packageName
 	
 	foreach ($server in $servers)
-	{			
+	{
 		if (!$remoteexecutiontool)
-		{		
+		{
 			if ($server.ContainsKey('remote.task.execution.remoteexecutiontool'))
 			{
 				$remoteexecutiontool = $server['remote.task.execution.remoteexecutiontool'][0]
 				$remoteexecutiontool = 'psexec'
-			}			
+			}
 		}
-				
+
 		if ($remoteexecutiontool -eq 'psremoting')
 		{
-			invoke-remotetaskwithremoting $tasks $server $deploymentEnvironment $packageName
+			invoke-remotetaskwithremoting $operation $tasks $server $deploymentEnvironment $packageName
 		}
 		else
 		{
-			invoke-remotetaskwithpsexec $tasks $server $deploymentEnvironment $packageName
-		}	
-	}	
+			invoke-remotetaskwithpsexec $operation $tasks $server $deploymentEnvironment $packageName
+		}
+	}
 }
 
 
-function invoke-remotetaskswithpsexec( $tasks, $serverNames, $deploymentEnvironment, $packageName)
+function invoke-remotetaskswithpsexec(
+    [Parameter(Mandatory = $true)][string] $operation,
+    $tasks, $serverNames, $deploymentEnvironment, $packageName
+)
 {
-	invoke-remotetasks $tasks $serverNames $deploymentEnvironment $packageName psexec
+	invoke-remotetasks $operation $tasks $serverNames $deploymentEnvironment $packageName psexec
 }
 
-function invoke-remotetaskswithremoting( $tasks, $serverNames, $deploymentEnvironment, $packageName)
+function invoke-remotetaskswithremoting(
+    [Parameter(Mandatory = $true)][string] $operation,
+    $tasks, $serverNames, $deploymentEnvironment, $packageName
+)
 {
-	invoke-remotetasks $tasks $serverNames $deploymentEnvironment $packageName psremoting
+	invoke-remotetasks $operation $tasks $serverNames $deploymentEnvironment $packageName psremoting
 }
 
-
-function invoke-remotetaskwithpsexec( $tasks, $server, $deploymentEnvironment, $packageName )
+# TODO: Convert to Invoke-RemoteCommandWithPSExec to support any kind of command
+function invoke-remotetaskwithpsexec(
+    [Parameter(Mandatory = $true)][string] $operation,
+    $tasks, $server, $environment, $packageName
+)
 {
 	$serverName = $server['server.name'][0]
 	write-host "===== Beginning execution of tasks $tasks on server $serverName ====="
 
 	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
-	$batchFile = $fullLocalReleaseWorkingFolder + '\' + 'deploy.bat'
+	$batchFile = $fullLocalReleaseWorkingFolder + '\_powerup\PowerUpCore\PowerUp\Modules\PowerUpRemote\Run.bat'
 
 	if ($server.ContainsKey('username'))
 	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile $deploymentEnvironment $tasks
+		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile $operation $environment $tasks
 	}
 	else
 	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile $deploymentEnvironment $tasks		
+		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile $operation $environment $tasks
 	}
 		
 	write-host "====== Finished execution of tasks $tasks on server $serverName ====="
@@ -66,7 +78,10 @@ function invoke-remotetaskwithpsexec( $tasks, $server, $deploymentEnvironment, $
 	
 }
 
-function invoke-remotetaskwithremoting( $tasks, $server, $deploymentEnvironment, $packageName )
+function invoke-remotetaskwithremoting(
+    [Parameter(Mandatory = $true)][string] $operation,
+    $tasks, $server, $deploymentEnvironment, $packageName
+)
 {	
 	$serverName = $server['server.name'][0]
 	write-host "===== Beginning execution of tasks $tasks on server $serverName ====="
@@ -74,7 +89,7 @@ function invoke-remotetaskwithremoting( $tasks, $server, $deploymentEnvironment,
 	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
 
 	$command = ".$psakeFile -buildFile $deployFile -deploymentEnvironment $deploymentEnvironment -tasks $tasks"		
-	Invoke-Command -scriptblock { param($workingFolder, $env, $tasks) set-location $workingFolder; .\_powerup\deploy\core\deploy_with_psake.ps1 -buildFile .\deploy.ps1 -deploymentEnvironment $env -tasks $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $deploymentEnvironment, $tasks 
+	Invoke-Command -scriptblock { param($workingFolder, $op, $env, $tasks) set-location $workingFolder; .\_powerup\deploy\core\deploy_with_psake.ps1 -buildFile .\_powerup\PowerUpCore\PowerUp\Modules\PowerUpRemote\RunPSake.ps1 -operation $op -operationEnvironment $env -tasks $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $operation, $environment, $tasks 
 	
 	write-host "========= Finished execution of tasks $tasks on server $serverName ====="
 }
