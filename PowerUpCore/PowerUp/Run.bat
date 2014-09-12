@@ -14,7 +14,7 @@ if '%1' == '' goto USAGE
 	)
 
 	powershell -inputformat none -command "%policyCmd%;%execCmd%"
-	exit /B
+	exit /B %errorlevel%
 
 :USAGE
 	echo Usage: 
