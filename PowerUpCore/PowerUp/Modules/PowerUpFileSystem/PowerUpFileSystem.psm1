@@ -114,9 +114,16 @@ function Copy-Directory(
     [string[]] $includeFilter,
     [string[]] $excludeFilter
 ) {
+    Ensure-Directory $destinationPath
+    $source = Get-Item $sourcePath
+    $destination = Get-Item $destinationPath
+
 	Get-ChildItem -Recurse -Path $sourcePath | 
         Where-Object { Test-ObjectFullName -ObjectFullName $_.FullName -IncludeFilter $includeFilter -ExcludeFilter $excludeFilter } |
-        Copy-Item -Destination { $_.FullName -replace $sourcePath, $destinationPath }
+        ForEach-Object {
+            $itemDestination = $_.FullName -replace [regex]::escape($source.FullName), $destination.FullName
+            Copy-Item -Path $_.FullName -Destination $itemDestination
+        }
 }
 
 function Test-ObjectFullName(
