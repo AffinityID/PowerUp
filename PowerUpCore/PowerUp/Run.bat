@@ -1,22 +1,20 @@
 @echo off
 
-if '%1' == '' goto USAGE
+if '%*' == '' goto USAGE
 
 :RUN
 	set policyCmd=$execPolicy = Get-ExecutionPolicy; if (!($execPolicy -eq 'Unrestricted')) { Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process }
-
-	set execCmd=%~dp0RunPSake.ps1 -operation %1
-	if not '%2' == '' (
-		set execCmd=%execCmd% -operationProfile %2
-	)
-	if not '%3' == '' (
-		set execCmd=%execCmd% -task %3
-	)
+	set execCmd=%~dp0RunPSake.ps1 %*
 
 	powershell -inputformat none -command "%policyCmd%;%execCmd%"
 	exit /B %errorlevel%
 
 :USAGE
 	echo Usage: 
-	echo 	Run.bat ^<operation^> ^<profile[optional]^> ^<task[optional]^>
+	echo 	Run.bat ^<Parameters^>
+	echo Parameters:
+	echo 	-operation [operationName:string] 	- The operation you would like to run.
+	echo 	-buildNumber [buildNumber:int] 		- (Optional) The build number for this run. Defaults to 0.
+	echo 	-operationProfile [profileName:string] 	- (Optional) The profile that you would like to use. 
+	echo 	-task [taskName:string] 		- (Optional) The task to execute. Defaults to the "default" task.
 	exit /B
