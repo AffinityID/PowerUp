@@ -148,11 +148,12 @@ function Test-ObjectFullName(
 
 Set-Alias Copy-Directory RobocopyDirectory
 
-Export-ModuleMember -function Write-FileToConsole,
-                               Ensure-Directory,
-                               Copy-MirroredDirectory,
-                               Grant-PathFullControl,
-                               CreateFile,
-                               DeleteFile,
-                               RobocopyDirectory -Alias Copy-Directory,
-                               Copy-FilteredDirectory
+Export-ModuleMember -Alias * -Function  Write-FileToConsole,
+                                        Ensure-Directory,
+                                        Copy-MirroredDirectory,
+                                        Grant-PathFullControl,
+                                        CreateFile,
+                                        DeleteFile,
+                                        RobocopyDirectory,
+                                        Copy-FilteredDirectory
+                   

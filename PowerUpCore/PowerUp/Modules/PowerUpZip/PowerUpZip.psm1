@@ -5,7 +5,7 @@ $zipExe = "$PSScriptRoot\7za.exe"
 
 function Compress-ZipFile(
     [Parameter(Mandatory=$true)][string] $sourcePath,
-    [Parameter(Mandatory=$true)][string] $destinationPath,
+    [Parameter(Mandatory=$true)][string] $destinationPath
 ) {
     $cmd = "$zipExe a -r -tzip $destinationPath $sourcePath"
     Write-Host $cmd
