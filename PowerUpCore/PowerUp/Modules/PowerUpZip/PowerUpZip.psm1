@@ -4,11 +4,10 @@ $ErrorActionPreference = 'Stop'
 $zipExe = "$PSScriptRoot\7za.exe"
 
 function Compress-ZipFile(
-    [Parameter(Mandatory=$true)][string] $zipFileName,
     [Parameter(Mandatory=$true)][string] $sourcePath,
-    [string] $destinationPath = ".\"
+    [Parameter(Mandatory=$true)][string] $destinationPath,
 ) {
-    $cmd = "$zipExe a -r -tzip $destinationPath$zipFileName $sourcePath"
+    $cmd = "$zipExe a -r -tzip $destinationPath $sourcePath"
     Write-Host $cmd
     Invoke-Expression $cmd
 }
