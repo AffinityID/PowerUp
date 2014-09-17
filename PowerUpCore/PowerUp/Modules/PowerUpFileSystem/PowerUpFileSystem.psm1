@@ -108,7 +108,7 @@ function Grant-PathFullControl(
     Set-Acl $path $acl
 }
 
-function Copy-Directory(
+function Copy-FilteredDirectory(
 	[Parameter(Mandatory=$true)][string] $sourcePath,
 	[Parameter(Mandatory=$true)][string] $destinationPath,
     [string[]] $includeFilter,
@@ -154,5 +154,5 @@ Export-ModuleMember -function Write-FileToConsole,
                                Grant-PathFullControl,
                                CreateFile,
                                DeleteFile,
-                               RobocopyDirectory,
-                               Copy-Directory
+                               RobocopyDirectory -Alias Copy-Directory,
+                               Copy-FilteredDirectory
