@@ -12,19 +12,20 @@ Write-Host "Executing under account $env:username"
 $ErrorActionPreference='Stop'
 
 Write-Host "Importing PowerUp modules"
-$parentPath = Split-Path -parent $MyInvocation.MyCommand.Definition
-Get-ChildItem "$parentPath\..\..\*" -Include 'Modules','Combos' -Recurse | sort Name | % {
-    $env:PSModulePath += ";$($_.FullName)\"
-}
+$scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
+$env:PSModulePath += ";$scriptPath\Combos\;$scriptPath\Modules\"
 
 $operationFile = ".\" + $operation + ".ps1"
 Write-Host "Invoking PSake with the following:
     Operation: $operation
     OperationFile: $operationFile
     OperationProfile: $operationProfile
+    BuildNumber: $buildNumber
     Task: $task"
 
-Import-Module PowerUpPsake\PSake
+# Settings should probably be placed here and passed in as part of the parameters when invoking PSake
+
+Import-Module PSake
 Invoke-PSake $operationFile $task -Framework 4.5.1x64 -Parameters @{ "build.number" = $buildNumber; "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
 
 if (-not $PSake.build_success) {

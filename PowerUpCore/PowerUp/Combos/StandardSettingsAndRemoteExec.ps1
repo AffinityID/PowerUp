@@ -15,7 +15,7 @@ function getPlainTextSettings($parameter, $fileName)
 	$currentPath = Get-Location
 	$fullFilePath = "$currentPath\$fileName"
 	
-	Import-Module powerupsettings
+	Import-Module _powerup\Modules\PowerUpTemplates\Id.PowershellExtensions.dll
 	
 	if (!(test-path $fullFilePath))
 	{
