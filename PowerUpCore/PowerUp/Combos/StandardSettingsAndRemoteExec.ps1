@@ -15,7 +15,7 @@ function getPlainTextSettings($parameter, $fileName)
 	$currentPath = Get-Location
 	$fullFilePath = "$currentPath\$fileName"
 	
-	import-module AffinityId\Id.PowershellExtensions.dll
+	Import-Module powerupsettings
 	
 	if (!(test-path $fullFilePath))
 	{
