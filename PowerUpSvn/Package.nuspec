@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>AffinityID.PowerUp.Svn</id>
+    <version>$version$</version>
+    <authors>Affinity ID</authors>
+    <owners>Affinity ID</owners>
+    <projectUrl>https://github.com/AffinityID/PowerUp.git</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Svn add-on for PowerUp.</description>
+    <releaseNotes />
+    <copyright />
+    <tags>Deployment PowerShell PSake Svn</tags>
+    <dependencies>
+        <dependency id="AffinityID.PowerUp" />
+    </dependencies>
+  </metadata>
+</package>
