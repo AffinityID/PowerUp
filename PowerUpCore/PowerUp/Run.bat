@@ -1,10 +1,11 @@
 @echo off
 
-if '%*' == '' goto USAGE
+set parameters=%*
+if "%parameters%" == "" goto USAGE
 
 :RUN
 	set policyCmd=$execPolicy = Get-ExecutionPolicy; if (!($execPolicy -eq 'Unrestricted')) { Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process }
-	set execCmd=%~dp0RunPSake.ps1 %*
+	set execCmd=%~dp0RunPSake.ps1 %parameters%
 
 	powershell -inputformat none -command "%policyCmd%;%execCmd%"
 	exit /B %errorlevel%

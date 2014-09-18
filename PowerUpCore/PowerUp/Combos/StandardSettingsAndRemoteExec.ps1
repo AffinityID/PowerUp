@@ -42,7 +42,6 @@ function run($operation, $task, $servers, $remoteWorkingSubFolder = $null)
 task default -depends preprocesspackage, deploy 
 
 task preprocesspackage {
-	touchPackageIdFile
 	& $processTemplatesScriptBlock
 }
 
@@ -50,12 +49,6 @@ tasksetup {
 	copyDeploymentProfileSpecificFiles
 	mergePackageInformation
 	mergeSettings
-}
-
-function touchPackageIdFile()
-{
-	$path = get-location 
-	(Get-Item $path\package.id).LastWriteTime = [datetime]::Now
 }
 
 function mergePackageInformation()
