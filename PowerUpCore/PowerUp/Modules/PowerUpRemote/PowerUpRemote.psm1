@@ -58,15 +58,15 @@ function invoke-remotetaskwithpsexec(
 	write-host "===== Beginning execution of tasks $tasks on server $serverName ====="
 
 	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
-	$batchFile = $fullLocalReleaseWorkingFolder + '\_powerup\PowerUpCore\PowerUp\Modules\PowerUpRemote\Run.bat'
+	$batchFile = $fullLocalReleaseWorkingFolder + '\_powerup\Run.bat'
 
 	if ($server.ContainsKey('username'))
 	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile $operation $environment $tasks
+		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $environment -task $tasks
 	}
 	else
 	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile $operation $environment $tasks
+		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $environment -task $tasks
 	}
 		
 	write-host "====== Finished execution of tasks $tasks on server $serverName ====="
@@ -88,8 +88,7 @@ function invoke-remotetaskwithremoting(
 
 	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
 
-	$command = ".$psakeFile -buildFile $deployFile -deploymentEnvironment $deploymentEnvironment -tasks $tasks"		
-	Invoke-Command -scriptblock { param($workingFolder, $op, $env, $tasks) set-location $workingFolder; .\_powerup\deploy\core\deploy_with_psake.ps1 -buildFile .\_powerup\PowerUpCore\PowerUp\Modules\PowerUpRemote\RunPSake.ps1 -operation $op -operationEnvironment $env -tasks $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $operation, $environment, $tasks 
+	Invoke-Command -scriptblock { param($workingFolder, $op, $env, $tasks) set-location $workingFolder; .\_powerup\RunPSake.ps1 -Operation $op -OperationProfile $env -Task $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $operation, $environment, $tasks 
 	
 	write-host "========= Finished execution of tasks $tasks on server $serverName ====="
 }
