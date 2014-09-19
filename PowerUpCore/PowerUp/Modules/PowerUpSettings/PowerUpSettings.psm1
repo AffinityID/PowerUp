@@ -14,4 +14,17 @@ function import-settings($settings)
     }	
 }
 
-Export-ModuleMember -function import-settings
+function Test-Setting($setting) {
+    if (-not (Test-Path variable:$setting)) {
+        return $false
+    }
+
+    $var = Get-Variable -Name $setting
+    if ([string]::IsNullOrWhiteSpace($var.Value)) {
+        return $false;
+    }
+    
+    return $true
+}
+
+Export-ModuleMember -function import-settings, Test-Setting
