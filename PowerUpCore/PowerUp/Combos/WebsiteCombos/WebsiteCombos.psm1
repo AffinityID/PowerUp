@@ -4,9 +4,9 @@ function Invoke-Combo-StandardWebsite($options)
 {
     import-module powerupfilesystem
     import-module powerupweb
-    import-module powerupappfabric\ApplicationServer
-    import-module poweruputils
-    Import-Module Pscx
+    # import-module powerupappfabric\ApplicationServer
+    # import-module poweruputils
+    # Import-Module Pscx
     
     Set-StrictMode -Version 2
         
@@ -165,15 +165,15 @@ function Invoke-Combo-StandardWebsite($options)
         }
     }
     
-    if($options.appfabricapplications)
-    {
-        foreach($application in $options.appfabricapplications)
-        {
-            new-webapplication $options.websitename $options.apppool.name $application.virtualdirectory "$($options.fulldestinationpath)\$($application.virtualdirectory)" 
-            Set-ASApplication -SiteName $options.websitename -VirtualPath $application.virtualdirectory -AutoStartMode All -EnableApplicationPool -Force
-            set-apppoolstartMode $options.websitename 1
-        }
-    }
+    # if($options.appfabricapplications)
+    # {
+    #     foreach($application in $options.appfabricapplications)
+    #     {
+    #         new-webapplication $options.websitename $options.apppool.name $application.virtualdirectory "$($options.fulldestinationpath)\$($application.virtualdirectory)" 
+    #         Set-ASApplication -SiteName $options.websitename -VirtualPath $application.virtualdirectory -AutoStartMode All -EnableApplicationPool -Force
+    #         set-apppoolstartMode $options.websitename 1
+    #     }
+    # }
 
     if($options.startwebsiteafter)
     {
