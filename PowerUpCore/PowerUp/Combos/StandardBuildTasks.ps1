@@ -1,5 +1,6 @@
 Import-Module PowerUpTestRunner
 Import-Module PowerUpFileSystem
+Import-Module PowerUpZip
 
 $packageDirectory = "_package"
 $testResultsDirectory = "_testresults"
