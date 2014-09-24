@@ -174,6 +174,8 @@ function ConvertTo-RemoteUri([string]$path)
 
 # private
 function Use-SvnClient([string]$username, [string]$password, [ScriptBlock]$block) {
+    Import-Module PowerUpUtilities
+    
     Use-Object (New-Object SharpSvn.SvnClient) {
         param ($client)
         if ($username)
@@ -182,18 +184,6 @@ function Use-SvnClient([string]$username, [string]$password, [ScriptBlock]$block
         }
 
         &$block $client
-    }
-}
-
-function Use-Object(
-    [Parameter(Mandatory=$true)][IDisposable]$object,
-    [Parameter(Mandatory=$true)][ScriptBlock]$action
-) {
-    try {
-        &$action $object
-    }
-    finally {
-        $object.Dispose();
     }
 }
 
