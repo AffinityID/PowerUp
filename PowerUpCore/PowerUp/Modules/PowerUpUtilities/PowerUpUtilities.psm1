@@ -1,3 +1,6 @@
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
 function Merge-Defaults($target, $defaults) {
     $orderedDefaults = $defaults.GetEnumerator()
     if ($defaults.ContainsKey("[ordered]")) {
@@ -55,4 +58,38 @@ function Use-Object(
     }
 }
 
-Export-ModuleMember -function Merge-Defaults, Use-Object
+function Invoke-External {
+    [CmdletBinding()]
+    param ([parameter(Mandatory=$true, ValueFromRemainingArguments=$true)] $command)
+    
+    if ($command -is [Collections.IEnumerable] -and $command -isnot [string]) {
+        $command = @($command | % { $_ })
+        if (($command | measure).Count -eq 1) {
+            $command = $command[0]
+        }
+        elseif (!($command | ? { $_ -isnot [string] })) {
+            $command = $command -join ' '
+        }
+        else {
+            $commandsWithTypes = ($command | % { "[$($_.GetType())] $_" }) -join ', '
+            throw "Unsupported command list: ($commandsWithTypes)"
+        }
+    }
+
+    Write-Host $command
+    if ($command -is [string]) {
+        Invoke-Expression $command
+    }
+    elseif ($command -is [ScriptBlock]) {
+        $command.Invoke();
+    }
+    else {
+        throw "Unsupported command type: " + $command.GetType()
+    }
+    
+    if ($LastExitCode -ne 0) {
+        Write-Error "$command failed with exit code $LastExitCode"
+    }
+}
+
+Export-ModuleMember -function Merge-Defaults, Use-Object, Invoke-External

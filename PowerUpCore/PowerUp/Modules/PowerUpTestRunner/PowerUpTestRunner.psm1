@@ -1,20 +1,26 @@
 Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
 $testRunnerExe = "$PSScriptRoot\nunit-console.exe"
 
-function Invoke-TestSuite(
-    [Parameter(Mandatory=$true)] $testSuitePathObject,
-    [string] $resultsDirectory = "_testresults"
-) {
+function Invoke-TestSuite {
+    [CmdletBinding()] # allows -ErrorAction
+    param (
+        [Parameter(Mandatory=$true)] $testSuitePathObject,
+        [string] $resultsDirectory = "_testresults"
+    )
+    
+    Import-Module PowerUpUtilities
+
     # Ensure results directory
     if (!(Test-Path $resultsDirectory -PathType Container)) {
-		New-Item $resultsDirectory -type directory
-	}
+        New-Item $resultsDirectory -type directory
+    }
 
     # Run test
     $resultFileName = $testSuitePathObject.Name
     $cmd = "$testRunnerExe /result=.\$resultsDirectory\$resultFileName.xml $testSuitePathObject"
-    Write-Host $cmd
-    Invoke-Expression $cmd
+    Invoke-External $cmd -ErrorAction $ErrorActionPreference
 }
 
 Export-ModuleMember -function Invoke-TestSuite
