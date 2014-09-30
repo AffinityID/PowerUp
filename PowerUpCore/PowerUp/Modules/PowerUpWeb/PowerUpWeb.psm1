@@ -3,6 +3,54 @@ $sitesPath = "IIS:\sites"
 $appPoolsPath = "IIS:\apppools"
 $bindingsPath = "IIS:\sslbindings"
 
+$ModuleName = "WebAdministration"
+$ModuleLoaded = $false
+$LoadAsSnapin = $false
+
+if ($PSVersionTable.PSVersion.Major -ge 2)
+{
+    if ((Get-Module -ListAvailable | ForEach-Object {$_.Name}) -contains $ModuleName)
+    {
+        Import-Module $ModuleName
+        if ((Get-Module | ForEach-Object {$_.Name}) -contains $ModuleName)
+        {
+            $ModuleLoaded = $true
+        }
+        else
+        {
+            $LoadAsSnapin = $true
+        }
+    }
+    elseif ((Get-Module | ForEach-Object {$_.Name}) -contains $ModuleName)
+    {
+        $ModuleLoaded = $true
+    }
+    else
+    {
+        $LoadAsSnapin = $true
+    }
+}
+else
+{
+    $LoadAsSnapin = $true
+}
+
+if ($LoadAsSnapin)
+{
+    if ((Get-PSSnapin -Registered | ForEach-Object {$_.Name}) -contains $ModuleName)
+    {
+        Add-PSSnapin $ModuleName
+        if ((Get-PSSnapin | ForEach-Object {$_.Name}) -contains $ModuleName)
+        {
+            $ModuleLoaded = $true
+        }
+    }
+    elseif ((Get-PSSnapin | ForEach-Object {$_.Name}) -contains $ModuleName)
+    {
+        $ModuleLoaded = $true
+    }
+}
+
 function StopAppPoolAndSite($appPoolName, $siteName)
 {
 	StopAppPool($appPoolName)
@@ -74,11 +122,6 @@ function SetAppPoolManagedRuntimeVersion($appPool, $runtimeVersion)
 	$appPool.managedRuntimeVersion = $runtimeVersion
 }
 
-function CreateWebsite($websiteName, $appPoolName, $fullPath, $protocol, $ip, $port, $hostHeader)
-{		
-	New-Item $sitesPath\$websiteName -physicalPath $fullPath -applicationPool $appPoolName -bindings @{protocol="http";bindingInformation="${ip}:${port}:${hostHeader}"}
-}
-
 function Set-WebsiteForSsl($useSelfSignedCert, $websiteName, $certificateName, $ipAddress, $port, $url)
 {
 	if ([System.Convert]::ToBoolean($useSelfSignedCert))
@@ -91,8 +134,6 @@ function Set-WebsiteForSsl($useSelfSignedCert, $websiteName, $certificateName, $
 	set-websitebinding $websiteName $url "https" $ipAddress $port 
 }
 
-
-
 function GetSslCertificate($certName)
 {
 	if ($certName.StartsWith("*")) {
@@ -101,7 +142,6 @@ function GetSslCertificate($certName)
 	}
 	Get-ChildItem cert:\LocalMachine\MY | Where-Object {$_.Subject -match "${certName}"} | Select-Object -First 1
 }
-
 
 function SslBindingExists($ip, $port)
 {
@@ -163,55 +203,6 @@ function WebItemExists($rootPath, $itemName)
 	return ((dir $rootPath | ForEach-Object {$_.Name}) -contains $itemName)	
 }
 
-
-$ModuleName = "WebAdministration"
-$ModuleLoaded = $false
-$LoadAsSnapin = $false
-
-if ($PSVersionTable.PSVersion.Major -ge 2)
-{
-    if ((Get-Module -ListAvailable | ForEach-Object {$_.Name}) -contains $ModuleName)
-    {
-        Import-Module $ModuleName
-        if ((Get-Module | ForEach-Object {$_.Name}) -contains $ModuleName)
-        {
-            $ModuleLoaded = $true
-        }
-        else
-        {
-            $LoadAsSnapin = $true
-        }
-    }
-    elseif ((Get-Module | ForEach-Object {$_.Name}) -contains $ModuleName)
-    {
-        $ModuleLoaded = $true
-    }
-    else
-    {
-        $LoadAsSnapin = $true
-    }
-}
-else
-{
-    $LoadAsSnapin = $true
-}
-
-if ($LoadAsSnapin)
-{
-    if ((Get-PSSnapin -Registered | ForEach-Object {$_.Name}) -contains $ModuleName)
-    {
-        Add-PSSnapin $ModuleName
-        if ((Get-PSSnapin | ForEach-Object {$_.Name}) -contains $ModuleName)
-        {
-            $ModuleLoaded = $true
-        }
-    }
-    elseif ((Get-PSSnapin | ForEach-Object {$_.Name}) -contains $ModuleName)
-    {
-        $ModuleLoaded = $true
-    }
-}
-
 function Uninstall-WebAppPool($appPoolName)
 {
 	write-host "Removing apppool $appPoolName"
@@ -246,9 +237,12 @@ function set-WebSite($websiteName, $appPoolName, $fullPath, $hostHeader, $protoc
             DeleteWebsite $websiteName
         }
     }	
-	
+
+    # http://forums.iis.net/t/1159761.aspx
+    $id = (Get-ChildItem $sitesPath | % { $_.id } | sort -Descending | select -first 1) + 1
+    
     write-host "Recreating website $websiteName with path $fullPath, app pool $apppoolname, bound to to host header $hostHeader with IP $ip, port $port over $protocol"
-    CreateWebsite $websiteName $appPoolName $fullPath $protocol $ip $port $hostHeader
+    New-Item $sitesPath\$websiteName -id $id -physicalPath $fullPath -applicationPool $appPoolName -bindings @{protocol="http";bindingInformation="${ip}:${port}:${hostHeader}"}
 }
 
 function set-SelfSignedSslCertificate($certName)
