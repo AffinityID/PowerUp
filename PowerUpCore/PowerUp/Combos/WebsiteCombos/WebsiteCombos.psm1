@@ -12,11 +12,9 @@ function Invoke-Combo-StandardWebsite($options)
     
     Set-StrictMode -Version 2
         
-    # apply defaults            
+    # apply defaults
     Merge-Defaults $options @{
         stopwebsitefirst = $true;
-        startwebsiteafter = $true;
-        tryrequestwebsite = $false;
         recreatewebsite = $true;
         port = 80;
         copymode = {
@@ -33,7 +31,8 @@ function Invoke-Combo-StandardWebsite($options)
         destinationfolder = { $options.websitename };
         sourcefolder = { $options.destinationfolder };
         fulldestinationpath = { "$($options.webroot)\$($options.destinationfolder)" };
-        fullsourcepath = { "$(get-location)\$($options.sourcefolder)" };        
+        fullsourcepath = { "$(get-location)\$($options.sourcefolder)" };
+        aftercopy = { {} };
         apppool = @{
             executionmode = "Integrated";
             dotnetversion = "v4.0";
@@ -51,6 +50,8 @@ function Invoke-Combo-StandardWebsite($options)
           umbraco = $false;
           code = { Write-Warning "No backup code found"; @() }
         };
+        startwebsiteafter = $true;
+        tryrequestwebsite = $false;
         '[ordered]' = @('destinationfolder','sourcefolder','fulldestinationpath','fullsourcepath','backup')
     }
     
@@ -115,6 +116,8 @@ function Invoke-Combo-StandardWebsite($options)
         default    { Throw "Copy mode not recognized: $copymode." }
     }
 
+    &($options.aftercopy)
+
     set-webapppool $options.apppool.name $options.apppool.executionmode $options.apppool.dotnetversion
     
     if ($options.apppool.username)
@@ -176,7 +179,7 @@ function Invoke-Combo-StandardWebsite($options)
     #         set-apppoolstartMode $options.websitename 1
     #     }
     # }
-
+    
     if($options.startwebsiteafter)
     {
         start-apppoolandsite $options.apppool.name $options.websitename
