@@ -10,7 +10,8 @@ $packageDirectory = "_package"
 $testResultsDirectory = "_testresults"
 
 properties {
-    $MSBuildArgs = ''
+    $MSBuildArgs = '';
+    $TestRoot = '.tests'
 }
 
 task Clean {
@@ -29,7 +30,7 @@ task Build {
 
 task Test {
     $anyTestError = $null
-    Get-ChildItem -Recurse -Path ".tests" -Include "*Tests*.dll" |
+    Get-ChildItem -Recurse -Path $TestRoot -Include "*Tests*.dll" |
         ? { $_.FullName -match "bin\\Release" } | # not great, but Split-Path would be much harder
         % { 
             Invoke-TestSuite $_ -ErrorAction Continue -ErrorVariable testError
