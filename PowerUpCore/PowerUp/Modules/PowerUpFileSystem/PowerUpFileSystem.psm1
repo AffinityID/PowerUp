@@ -108,6 +108,7 @@ function Grant-PathFullControl(
     Set-Acl $path $acl
 }
 
+# TODO: rewrite using proper globbing
 function Copy-FilteredDirectory(
 	[Parameter(Mandatory=$true)][string] $sourcePath,
 	[Parameter(Mandatory=$true)][string] $destinationPath,
@@ -122,6 +123,7 @@ function Copy-FilteredDirectory(
         Where-Object { Test-ObjectFullName -ObjectFullName $_.FullName -IncludeFilter $includeFilter -ExcludeFilter $excludeFilter } |
         ForEach-Object {
             $itemDestination = $_.FullName -replace [regex]::escape($source.FullName), $destination.FullName
+            Write-Host "Copying $($_.FullName) => $itemDestination"
             Copy-Item -Path $_.FullName -Destination $itemDestination
         }
 }
@@ -139,6 +141,7 @@ function Test-ObjectFullName(
 
     foreach ($item in $excludeFilter) {
         if ($objectFullName -like $item) {
+            Write-Host "Excluding $objectFullName (matches $item)"
             return $false
         }
     }
