@@ -108,7 +108,6 @@ function Grant-PathFullControl(
     Set-Acl $path $acl
 }
 
-# TODO: rewrite using proper globbing
 function Copy-FilteredDirectory(
 	[Parameter(Mandatory=$true)][string] $sourcePath,
 	[Parameter(Mandatory=$true)][string] $destinationPath,
@@ -123,7 +122,6 @@ function Copy-FilteredDirectory(
         Where-Object { Test-ObjectFullName -ObjectFullName $_.FullName -IncludeFilter $includeFilter -ExcludeFilter $excludeFilter } |
         ForEach-Object {
             $itemDestination = $_.FullName -replace [regex]::escape($source.FullName), $destination.FullName
-            Write-Host "Copying $($_.FullName) => $itemDestination"
             Copy-Item -Path $_.FullName -Destination $itemDestination
         }
 }
@@ -141,12 +139,65 @@ function Test-ObjectFullName(
 
     foreach ($item in $excludeFilter) {
         if ($objectFullName -like $item) {
-            Write-Host "Excluding $objectFullName (matches $item)"
             return $false
         }
     }
 
     return $true
+}
+
+function Remove-DirectoryFailSafe(
+    [Parameter(Mandatory=$true)] [string] $path
+) {
+    Remove-DirectoryFailSafeInternal (Get-Item $path)
+}
+
+function Remove-DirectoryFailSafeInternal(
+    [Parameter(Mandatory=$true)] [IO.DirectoryInfo] $directory
+) {
+    $directory.EnumerateFileSystemInfos() | % {
+        if ($_ -is [IO.DirectoryInfo]) {
+            Remove-DirectoryFailSafeInternal $_
+        }
+        else {
+            Remove-NonRecursiveFailSafeInternal $_
+        }
+    }
+    
+    Remove-NonRecursiveFailSafeInternal $directory
+}
+
+function Remove-NonRecursiveFailSafeInternal(
+    [Parameter(Mandatory=$true)] [IO.FileSystemInfo] $item
+) {
+    Write-Host "Deleting $($item.FullName)"
+    $success = $false
+    while ($item.Exists) {
+        try {
+            $item.Attributes = 'Normal'
+            $item.Delete()
+        }
+        catch {
+            $exception = $_.Exception
+            while ($exception -is [Management.Automation.MethodInvocationException]) {
+                $exception = $exception.InnerException
+            }
+
+            if ($exception -isnot [IO.IOException]) {
+                throw $exception
+            }
+            
+            Write-Error "Failed to delete '$($item.FullName)':`r`n$($exception.Message)" -ErrorAction Continue
+
+            $holders = @(&("$PSScriptRoot\handle") $item.FullName | % { $_ } | select -skip 5) # 5 = header in current handle.exe
+            if ($holders.Length -gt 0) {
+                Write-Host "Processes holding '$($item.FullName)':`r`n$($holders -join "`r`n")"
+            }
+            Write-Host "`r`nRetrying in 30 seconds..."
+
+            Start-Sleep -Seconds 30
+        }
+    }
 }
 
 Set-Alias Copy-Directory RobocopyDirectory
@@ -158,5 +209,5 @@ Export-ModuleMember -Alias * -Function  Write-FileToConsole,
                                         CreateFile,
                                         DeleteFile,
                                         RobocopyDirectory,
-                                        Copy-FilteredDirectory
-                   
+                                        Copy-FilteredDirectory,
+                                        Remove-DirectoryFailSafe
