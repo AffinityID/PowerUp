@@ -26,7 +26,7 @@ Write-Host "Invoking PSake with the following:
 # Settings should probably be placed here and passed in as part of the parameters when invoking PSake
 
 Import-Module PSake
-Invoke-PSake $operationFile $task -Framework 4.5.1x64 -Parameters @{ "build.number" = $buildNumber; "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
+Invoke-PSake $operationFile $task -Parameters @{ "build.number" = $buildNumber; "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
 
 if (-not $PSake.build_success) {
     $host.ui.WriteErrorLine("Build Failed!")

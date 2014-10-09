@@ -1,9 +1,14 @@
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
 Import-Module PowerUpTestRunner
 Import-Module PowerUpFileSystem
 Import-Module PowerUpZip
+Import-Module PowerUpNuGet
 
 $packageDirectory = "_package"
 $testResultsDirectory = "_testresults"
+$nugetServers = @()
 
 task Clean {
     if ((Test-Path $testResultsDirectory -PathType Container)) {
@@ -15,11 +20,23 @@ task Clean {
 }
 
 task Build {
-    msbuild /Target:Rebuild /Property:Configuration=Release
+	foreach ($nugetServer in $nugetServers) {
+		Restore-NuGet $nugetServer
+	}
+	
+	msbuild /Target:Rebuild /Property:Configuration=Release
 }
 
 task Test {
     Get-ChildItem -Recurse -Path ".tests\**\bin\Release" -Filter "*.Tests.dll" | % {
         Invoke-TestSuite $_
     }
+}
+
+function NuGetServers {
+	[CmdletBinding()]
+	param(
+	    [Parameter(Position=0,Mandatory=1)][string[]]$serverUris
+	)
+	$nugetServers += $serverUris
 }
