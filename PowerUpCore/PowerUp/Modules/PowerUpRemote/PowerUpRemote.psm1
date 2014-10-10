@@ -1,7 +1,7 @@
 
 function invoke-remotetasks(
     [Parameter(Mandatory = $true)][string] $operation,
-    $tasks, $serverNames, $deploymentEnvironment, $packageName, $settingsFunction, $remoteexecutiontool=$null
+    $tasks, $serverNames, $profile, $packageName, $settingsFunction, $remoteexecutiontool=$null
 )
 {
 	$currentLocation = get-location
@@ -22,11 +22,11 @@ function invoke-remotetasks(
 
 		if ($remoteexecutiontool -eq 'psremoting')
 		{
-			invoke-remotetaskwithremoting $operation $tasks $server $deploymentEnvironment $packageName
+			invoke-remotetaskwithremoting $operation $tasks $server $profile $packageName
 		}
 		else
 		{
-			invoke-remotetaskwithpsexec $operation $tasks $server $deploymentEnvironment $packageName
+			invoke-remotetaskwithpsexec $operation $tasks $server $profile $packageName
 		}
 	}
 }
@@ -34,24 +34,24 @@ function invoke-remotetasks(
 
 function invoke-remotetaskswithpsexec(
     [Parameter(Mandatory = $true)][string] $operation,
-    $tasks, $serverNames, $deploymentEnvironment, $packageName
+    $tasks, $serverNames, $profile, $packageName
 )
 {
-	invoke-remotetasks $operation $tasks $serverNames $deploymentEnvironment $packageName psexec
+	invoke-remotetasks $operation $tasks $serverNames $profile $packageName psexec
 }
 
 function invoke-remotetaskswithremoting(
     [Parameter(Mandatory = $true)][string] $operation,
-    $tasks, $serverNames, $deploymentEnvironment, $packageName
+    $tasks, $serverNames, $profile, $packageName
 )
 {
-	invoke-remotetasks $operation $tasks $serverNames $deploymentEnvironment $packageName psremoting
+	invoke-remotetasks $operation $tasks $serverNames $profile $packageName psremoting
 }
 
 # TODO: Convert to Invoke-RemoteCommandWithPSExec to support any kind of command
 function invoke-remotetaskwithpsexec(
     [Parameter(Mandatory = $true)][string] $operation,
-    $tasks, $server, $environment, $packageName
+    $tasks, $server, $profile, $packageName
 )
 {
 	$serverName = $server['server.name'][0]
@@ -62,11 +62,11 @@ function invoke-remotetaskwithpsexec(
 
 	if ($server.ContainsKey('username'))
 	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $environment -task $tasks
+		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $profile -task $tasks
 	}
 	else
 	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $environment -task $tasks
+		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $profile -task $tasks
 	}
 		
 	write-host "====== Finished execution of tasks $tasks on server $serverName ====="
@@ -80,7 +80,7 @@ function invoke-remotetaskwithpsexec(
 
 function invoke-remotetaskwithremoting(
     [Parameter(Mandatory = $true)][string] $operation,
-    $tasks, $server, $deploymentEnvironment, $packageName
+    $tasks, $server, $profile, $packageName
 )
 {	
 	$serverName = $server['server.name'][0]
@@ -88,7 +88,7 @@ function invoke-remotetaskwithremoting(
 
 	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
 
-	Invoke-Command -scriptblock { param($workingFolder, $op, $env, $tasks) set-location $workingFolder; .\_powerup\RunPSake.ps1 -Operation $op -OperationProfile $env -Task $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $operation, $environment, $tasks 
+	Invoke-Command -scriptblock { param($workingFolder, $op, $prof, $tasks) set-location $workingFolder; .\_powerup\RunPSake.ps1 -Operation $op -OperationProfile $prof -Task $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $operation, $profile, $tasks 
 	
 	write-host "========= Finished execution of tasks $tasks on server $serverName ====="
 }

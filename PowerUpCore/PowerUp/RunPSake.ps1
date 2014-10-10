@@ -25,8 +25,16 @@ Write-Host "Invoking PSake with the following:
 
 # Settings should probably be placed here and passed in as part of the parameters when invoking PSake
 
+New-Variable 'powerup.operation' -Value $operation -Option Constant -Scope Global
+New-Variable 'powerup.profile' -Value $operationProfile -Option Constant -Scope Global
+
 Import-Module PSake
-Invoke-PSake $operationFile $task -Framework 4.5.1x64 -Parameters @{ "build.number" = $buildNumber; "operation.profile" = $operationProfile; "deployment.profile" = $operationProfile }
+Invoke-PSake $operationFile $task -Framework 4.5.1x64 -Parameters @{
+    "build.number" = $buildNumber;
+    # Obsolete, use powerup.* from above:
+    "operation.profile" = $operationProfile;
+    "deployment.profile" = $operationProfile
+}
 
 if (-not $PSake.build_success) {
     $host.ui.WriteErrorLine("Build Failed!")

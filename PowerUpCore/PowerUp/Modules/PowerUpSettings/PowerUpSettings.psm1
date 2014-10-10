@@ -1,3 +1,8 @@
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
+Import-Module "$PSScriptRoot\Id.PowershellExtensions.dll" -Global
+
 function import-settings($settings) 
 {
     foreach($key in $settings.keys)
@@ -14,14 +19,18 @@ function import-settings($settings)
     }	
 }
 
-function Test-Setting($setting) {
+function Test-Setting([Parameter(Mandatory=$true)] [string] $setting, [switch] [boolean] $isTrue = $false) {
     if (-not (Test-Path variable:$setting)) {
         return $false
     }
 
-    $var = Get-Variable -Name $setting
-    if ([string]::IsNullOrWhiteSpace($var.Value)) {
+    $value = (Get-Variable -Name $setting).Value
+    if ([string]::IsNullOrWhiteSpace($value)) {
         return $false;
+    }
+    
+    if ($isTrue) {
+        return [System.Boolean]::Parse($value)
     }
     
     return $true
