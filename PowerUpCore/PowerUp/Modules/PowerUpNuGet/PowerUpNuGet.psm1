@@ -86,11 +86,11 @@ function Send-NuGetPackage(
   &$nuget push $packagePath -s $serverUrl
 }
 
-function Restore-NuGet(
+function Restore-NuGetPackages(
     [Parameter(Mandatory=$true)][uri] $serverUrl
 ) {
     Write-Host "$nuget restore -source $serverUrl"
     &$nuget restore -source $serverUrl
 }
 
-export-modulemember -function Update-NuGet, Restore-NuGet, Update-NuSpecFromFiles, New-NuGetPackage, Send-NuGetPackage
+export-modulemember -function Update-NuGet, Restore-NuGetPackages, Update-NuSpecFromFiles, New-NuGetPackage, Send-NuGetPackage

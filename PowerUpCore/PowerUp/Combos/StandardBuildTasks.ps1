@@ -9,9 +9,10 @@ Import-Module PowerUpNuGet
 
 $packageDirectory = "_package"
 $testResultsDirectory = "_testresults"
-$nugetServers = @()
 
 properties {
+    $NuGetServer = 'https://nuget.org';
+
     $MSBuildArgs = '';
     
     $TestRoot = '.tests';
@@ -33,12 +34,10 @@ task Clean {
     Remove-DirectoryFailSafe $packageDirectory
 }
 
-task Restore {
-	foreach ($nugetServer in $nugetServers) {
-		Restore-NuGet $nugetServer
-	}
+task RestorePackages {
+    Restore-NuGetPackages $NuGetServer
 }
-	
+
 task Build {    
     $MSBuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=Release") + $MSBuildArgs
     Invoke-External msbuild $MSBuildArgsFull
@@ -73,12 +72,4 @@ task Package {
 
     $zip = ".\_package\package_${build.number}.zip"
     Compress-ZipFile .\_package\* $zip
-}
-
-function NuGetServers {
-	[CmdletBinding()]
-	param(
-	    [Parameter(Position=0,Mandatory=1)][string[]]$serverUris
-	)
-	$nugetServers += $serverUris
 }
