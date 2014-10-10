@@ -13,16 +13,24 @@ $nugetServers = @()
 
 properties {
     $MSBuildArgs = '';
-    $TestRoot = '.tests'
+    
+    $TestRoot = '.tests';
+    
+    $PackageStucture = @();
+    $StandardWebExcludes = @(
+        "*.cs",
+        "*.csproj",
+        "*.resx",
+        "*.user"
+        "*Thumbs.db",
+        "*\obj*",
+        "*\App_Data*"
+    )
 }
 
 task Clean {
-    if ((Test-Path $testResultsDirectory -PathType Container)) {
-        Remove-Item -Recurse -Force $testResultsDirectory
-    }
-    if ((Test-Path $packageDirectory -PathType Container)) {
-        Remove-Item -Recurse -Force $packageDirectory
-    }
+    Remove-DirectoryFailSafe $testResultsDirectory
+    Remove-DirectoryFailSafe $packageDirectory
 }
 
 task Restore {
@@ -50,6 +58,21 @@ task Test {
     if ($anyTestError) {
         Write-Error "One of test suites failed: $anyTestError" -ErrorAction Stop
     }
+}
+
+task Package {
+    $PackageStructure | % {
+        $exclude = if ($_.ContainsKey("Exclude")) { $_["Exclude"]; } else { @() }
+        Copy-FilteredDirectory .\$($_.SourcePath) .\_package\$($_.PackagePath) -excludeFilter $exclude
+    }
+    
+    Copy-Directory .\_templates\ .\_package\_templates
+    Copy-Item .\deploy.ps1 .\_package
+    Copy-Item .\settings.txt .\_package
+    Copy-Item .\servers.txt .\_package
+
+    $zip = ".\_package\package_${build.number}.zip"
+    Compress-ZipFile .\_package\* $zip
 }
 
 function NuGetServers {

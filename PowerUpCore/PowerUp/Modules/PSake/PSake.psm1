@@ -1,3 +1,7 @@
+
+# NOTE: This is a modified version of psake built at Affinity ID. Later we may contribute
+# it to main, but it seems that PSake is dormant now (https://groups.google.com/forum/#!topic/psake-users/VY_Fw_coJEA).
+
 # psake
 # Copyright (c) 2012 James Kovacs
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -71,7 +75,9 @@ function Invoke-Task
                     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
                     $currentContext.currentTaskName = $taskName
 
-                    & $currentContext.taskSetupScriptBlock
+                    foreach($taskSetup in $currentContext.taskSetupScriptBlocks) {
+                        & $taskSetup
+                    }
 
                     if ($task.PreAction) {
                         & $task.PreAction
@@ -93,7 +99,9 @@ function Invoke-Task
                         & $task.PostAction
                     }
 
-                    & $currentContext.taskTearDownScriptBlock
+                    foreach($taskTearDown in $currentContext.taskTearDownScriptBlocks) {
+                        & $taskTearDown
+                    }
                     $task.Duration = $stopwatch.Elapsed
                 } catch {
                     if ($task.ContinueOnError) {
@@ -277,7 +285,7 @@ function TaskSetup {
     param(
         [Parameter(Position=0,Mandatory=1)][scriptblock]$setup
     )
-    $psake.context.Peek().taskSetupScriptBlock = $setup
+    $psake.context.Peek().taskSetupScriptBlocks += $setup
 }
 
 # .ExternalHelp  psake.psm1-help.xml
@@ -286,7 +294,7 @@ function TaskTearDown {
     param(
         [Parameter(Position=0,Mandatory=1)][scriptblock]$teardown
     )
-    $psake.context.Peek().taskTearDownScriptBlock = $teardown
+    $psake.context.Peek().taskTearDownScriptBlocks += $teardown
 }
 
 # .ExternalHelp  psake.psm1-help.xml
@@ -335,8 +343,8 @@ function Invoke-psake {
         $psake.build_success = $false
 
         $psake.context.push(@{
-            "taskSetupScriptBlock" = {};
-            "taskTearDownScriptBlock" = {};
+            "taskSetupScriptBlocks" = @();
+            "taskTearDownScriptBlocks" = @();
             "executedTasks" = new-object System.Collections.Stack;
             "callStack" = new-object System.Collections.Stack;
             "originalEnvPath" = $env:path;

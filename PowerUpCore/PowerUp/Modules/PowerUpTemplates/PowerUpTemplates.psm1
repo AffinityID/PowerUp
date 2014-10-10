@@ -1,40 +1,55 @@
-Import-Module $PSScriptRoot\Id.PowershellExtensions.dll
-
-function Expand-Templates($settingsFile, $deploymentProfile, $templatePath, $outputPath) {
-	Write-Output "Reading settings"
-	$settings = get-parsedsettings $settingsFile $deploymentProfile 
-	
-	Write-Output "Template settings for the $deploymentProfile environment are:"
-	$settings | Format-Table -property *
-	
-	copy-substitutedsettingfiles -templatesDirectory $templatePath -targetDirectory $outputPath -deploymentEnvironment $deploymentProfile -settings $settings
-}
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
 
 function Merge-ProfileSpecificFiles($deploymentProfile) {
-	$currentPath = Get-Location
+    $currentPath = Get-Location
 
-	if ((Test-Path $currentPath\_profilefiles\$deploymentProfile -PathType Container) -eq $true)
-	{
-		Copy-Item $currentPath\_profilefiles\$deploymentProfile\* -destination $currentPath\ -recurse -force   
-	}	
+    if ((Test-Path $currentPath\_profilefiles\$deploymentProfile -PathType Container) -eq $true) {
+        Copy-Item $currentPath\_profilefiles\$deploymentProfile\* -destination $currentPath\ -recurse -force   
+    }
 }
 
+function Merge-Templates($profile) {
+    Import-Module PowerUpFileSystem
 
-function Merge-Templates($settings, $deploymentProfile) {
-	$currentPath = Get-Location
-	
-	if ((Test-Path $currentPath\_templates\ -PathType Container) -eq $false)
-	{
-		return
-	}
+    $currentPath = Get-Location
+    if (!(Test-Path $currentPath\_templates\ -PathType Container)) {
+        Write-Host "Path $currentPath\_templates was not found -- templates would not be copied."
+        return
+    }
 
-	copy-substitutedsettingfiles -templatesDirectory $currentPath\_templates -targetDirectory $currentPath\_templatesoutput -deploymentEnvironment $deploymentProfile -settings $settings
-	
-	if ((Test-Path $currentPath\_templatesoutput\$deploymentProfile -PathType Container) -eq $true)
-	{
-		Copy-Item $currentPath\_templatesoutput\$deploymentProfile\* -destination $currentPath\ -recurse -force    
-	}
+    Copy-Directory $currentPath\_templates $currentPath\_templatesoutput\$profile
+    Get-ChildItem $currentPath\_templatesoutput\$profile -Recurse | ? { !($_.PSIsContainer) } | % {
+        Expand-Template $_.FullName
+    }
+
+    if ((Test-Path $currentPath\_templatesoutput\$profile -PathType Container)) {
+        Copy-Item $currentPath\_templatesoutput\$profile\* -destination $currentPath\ -recurse -force    
+    }
 }
 
+function Expand-Template($path) {
+    Write-Host "Expanding template '$path'"
+    $content = [IO.File]::ReadAllText($path)
+    $errors = @()
+    $content = [regex]::Replace($content, '\$(?:{.*}|\(.*\))', {
+        param ($match)
+        try {
+            $result = (Invoke-Expression "Set-StrictMode -Version 2; `$ErrorActionPreference = 'Stop'; `"$($match.Value)`"")
+        }
+        catch {
+            $errors += "$($match.Value): $_"
+            $result = 'error!'
+        }
+        Write-Host "  $($match.Value) => $result"
+        return $result
+    })
+    
+    if ($errors.Length -gt 0) {
+        Write-Error "Failed to expand values in $path`:`r`n  $($errors -join "  `r`n")"
+    }
 
-Export-ModuleMember -function Expand-Templates, Merge-Templates, Merge-ProfileSpecificFiles
+    [IO.File]::WriteAllText($path, $content)
+}
+
+Export-ModuleMember -function Merge-Templates, Merge-ProfileSpecificFiles

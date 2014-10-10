@@ -149,6 +149,11 @@ function Test-ObjectFullName(
 function Remove-DirectoryFailSafe(
     [Parameter(Mandatory=$true)] [string] $path
 ) {
+    if (!(Test-Path $path)) {
+        Write-Host "Directory '$path' does not exist (no need to delete)."
+        return
+    }
+
     Remove-DirectoryFailSafeInternal (Get-Item $path)
 }
 
