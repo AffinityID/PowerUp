@@ -93,4 +93,34 @@ function Restore-NuGetPackages(
     &$nuget restore -source $serverUrl
 }
 
-export-modulemember -function Update-NuGet, Restore-NuGetPackages, Update-NuSpecFromFiles, New-NuGetPackage, Send-NuGetPackage
+function Install-NuGetPackage(
+    [Parameter(Mandatory=$true)][string] $name,
+    [string] $outputDirectory,
+    [version] $version,
+    [uri] $server
+) {
+    Import-Module PowerUpUtilities
+    
+    $command = "$nuget install `"$name`""
+    if ($outputDirectory) {
+        $outputDirectory = (Get-Item $outputDirectory).FullName
+        $command += " -OutputDirectory `"$outputDirectory`""
+    }
+    
+    if ($version) {
+        $command += " -Version $version"
+    }
+    
+    if ($server) {
+        $server += " -Source $server"
+    }
+    
+    Invoke-External $command
+}
+
+export-modulemember -function Update-NuGet,
+                              Restore-NuGetPackages,
+                              Update-NuSpecFromFiles,
+                              New-NuGetPackage,
+                              Send-NuGetPackage,
+                              Install-NuGetPackage
