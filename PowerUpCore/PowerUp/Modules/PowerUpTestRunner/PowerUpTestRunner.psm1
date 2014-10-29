@@ -1,9 +1,10 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-$testRunnerExe = "$PSScriptRoot\nunit-console.exe"
+$nunitTestRunnerExe = "$PSScriptRoot\Nunit\nunit-console.exe"
+$pesterTestRunnerModule = "$PSScriptRoot\Pester.3.0.0\Pester"
 
-function Invoke-TestSuite {
+function Invoke-NUnitTests {
     [CmdletBinding()] # allows -ErrorAction
     param (
         [Parameter(Mandatory=$true)] $testSuitePathObject,
@@ -19,8 +20,24 @@ function Invoke-TestSuite {
 
     # Run test
     $resultFileName = $testSuitePathObject.Name
-    $cmd = "$testRunnerExe /result=.\$resultsDirectory\$resultFileName.xml $testSuitePathObject"
+    $cmd = "$nunitTestRunnerExe /result=.\$resultsDirectory\$resultFileName.xml $testSuitePathObject"
     Invoke-External $cmd -ErrorAction $ErrorActionPreference
 }
 
-Export-ModuleMember -function Invoke-TestSuite
+function Invoke-PesterTests {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)] $testSuitePathObject,
+        [string] $resultsDirectory = "_testresults"
+    )
+    
+    # Ensure results directory
+    if (!(Test-Path $resultsDirectory -PathType Container)) {
+        New-Item $resultsDirectory -type directory
+    }
+	
+	Import-Module $pesterTestRunnerModule -Global
+	Invoke-Pester -Path $testSuitePathObject -OutputXml "$resultsDirectory\pester.testresults.xml"
+}
+
+Export-ModuleMember -function Invoke-NUnitTests, Invoke-PesterTests

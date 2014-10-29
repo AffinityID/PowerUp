@@ -11,12 +11,12 @@ $packageDirectory = "_package"
 $testResultsDirectory = "_testresults"
 
 properties {
-    $NuGetServer = 'https://nuget.org';
+    $NuGetServers = @('https://nuget.org');
 
     $MSBuildArgs = '';
     
     $TestRoot = '.tests';
-    
+	
     $PackageStucture = @();
     $StandardWebExcludes = @(
         "*.cs",
@@ -35,7 +35,7 @@ task Clean {
 }
 
 task RestorePackages {
-    Restore-NuGetPackages $NuGetServer
+	Restore-NuGetPackages $NuGetServers
 }
 
 task Build {    
@@ -48,14 +48,23 @@ task Test {
     Get-ChildItem -Recurse -Path $TestRoot -Include "*Tests*.dll" |
         ? { $_.FullName -match "bin\\Release" } | # not great, but Split-Path would be much harder
         % { 
-            Invoke-TestSuite $_ -ErrorAction Continue -ErrorVariable testError
+            Invoke-NUnitTests $_ -ErrorAction Continue -ErrorVariable testError
             if ($testError) {
                 $anyTestError = $testError
             }
         }
 
     if ($anyTestError) {
-        Write-Error "One of test suites failed: $anyTestError" -ErrorAction Stop
+        Write-Error "One of NUnit tests failed: $anyTestError" -ErrorAction Stop
+    }
+	
+	Invoke-PesterTests $TestRoot -ErrorAction Continue -ErrorVariable testError
+    if ($testError) {
+        $anyTestError = $testError
+    }	
+
+    if ($anyTestError) {
+        Write-Error "One of PowerShell tests failed: $anyTestError" -ErrorAction Stop
     }
 }
 

@@ -87,10 +87,21 @@ function Send-NuGetPackage(
 }
 
 function Restore-NuGetPackages(
-    [Parameter(Mandatory=$true)][uri] $serverUrl
+    [Parameter(Mandatory=$true)][uri[]] $serverUrls
 ) {
-    Write-Host "$nuget restore -source $serverUrl"
-    &$nuget restore -source $serverUrl
+	$source = $serverUrls -join ';'
+	Invoke-NuGet "restore -source $source"
 }
 
-export-modulemember -function Update-NuGet, Restore-NuGetPackages, Update-NuSpecFromFiles, New-NuGetPackage, Send-NuGetPackage
+function Invoke-NuGet(
+	[string] $parameters
+) {
+	$command = "$nuget"
+	if ($parameters) {
+		$command += " " + $parameters
+	}
+	Write-Host "$command"
+	Invoke-Expression $command
+}
+
+export-modulemember -function Update-NuGet, Restore-NuGetPackages, Update-NuSpecFromFiles, New-NuGetPackage, Send-NuGetPackage, Invoke-NuGet
