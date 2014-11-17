@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 $nuget = "$PSScriptRoot\NuGet.exe"
 
 function Update-NuGet() {
+    Import-Module PowerUpUtilities
     Invoke-External "$nuget update -self"
 }
 
