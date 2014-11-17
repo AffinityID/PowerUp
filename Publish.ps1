@@ -9,8 +9,9 @@ if (Test-Path $outputPath) {
     Remove-Item -Recurse $outputPath
 }
 
-Import-Module .\PowerUpCore\PowerUp\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
-Import-Module .\PowerUpCore\PowerUp\Modules\PowerUpNuGet\PowerUpNuGet.psm1
+$env:PSModulePath += ";.\PowerUpCore\PowerUp\Modules\"
+Import-Module PowerUpFileSystem
+Import-Module PowerUpNuGet
 
 Update-NuGet
 

@@ -69,7 +69,7 @@ function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
     [Parameter(Mandatory=$true)][string] $outputDirectory,
     [string] $options = $null,
-    [hashtable] $properties = $true,
+    [hashtable] $properties = $null,
     [switch][boolean] $includeReferencedProjects = $false    
 ) {
     Import-Module PowerUpUtilities
