@@ -7,10 +7,10 @@ function Merge-Defaults($target, $defaults) {
         # Sort-Object here is a hack. PowerShell 2 does not provide [ordered],
         # so I allow users to provide order
         $order = $defaults['[ordered]']
-        $orderedDefaults = $orderedDefaults | Sort-Object @{expression = {[array]::IndexOf($order, $_.Key)}}
+        $orderedDefaults = $orderedDefaults | sort @{expression = {[array]::IndexOf($order, $_.Key)}}
     }
 
-    $orderedDefaults | ForEach-Object {
+    $orderedDefaults | % {
         $key = $_.Key;
         if ($key -eq '[ordered]') {
             return

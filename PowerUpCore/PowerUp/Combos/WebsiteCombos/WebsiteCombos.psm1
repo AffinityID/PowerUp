@@ -2,7 +2,12 @@ Import-Module PowerUpUtilities
 
 Add-Type -TypeDefinition "public enum WebsiteCopyMode { Default, NoMirror, NoCopy }"
 
-function Invoke-Combo-StandardWebsite($options)
+function Invoke-Combo-StandardWebsite($options) {
+    Write-Warning "Invoke-Combo-StandardWebsite is obsolete/non-standard name, use Invoke-ComboStandardWebsite instead."
+    Invoke-ComboStandardWebsite $options
+}
+
+function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $options)
 {
     import-module powerupfilesystem
     import-module powerupweb

@@ -4,8 +4,7 @@ $ErrorActionPreference = 'Stop'
 $nuget = "$PSScriptRoot\NuGet.exe"
 
 function Update-NuGet() {
-    Write-Host "$nuget update -self"
-    &$nuget update -self
+    Invoke-External "$nuget update -self"
 }
 
 function Update-NuSpecFromFiles(
@@ -68,22 +67,40 @@ function Get-AttributeValue(
 function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
     [Parameter(Mandatory=$true)][string] $outputDirectory,
-    [string] $options
+    [string] $options = $null,
+    [hashtable] $properties = $true,
+    [switch][boolean] $includeReferencedProjects = $false    
 ) {
-    $packCmd = "$nuget pack $nuspecPath -outputdirectory $outputDirectory"
-    if ($options) {
-        $packCmd += " " + $options
+    Import-Module PowerUpUtilities
+
+    $command = "$nuget pack $nuspecPath -Outputdirectory $outputDirectory"
+    if ($includeReferencedProjects) { $command += " -IncludeReferencedProjects" }
+    if ($properties) {
+        $command += " -Properties "
+        $command += ($properties.GetEnumerator() | % { "$($_.Name)=$($_.Value)" }) -join ';'
     }
-    Write-Host $packCmd
-    Invoke-Expression $packCmd
+    if ($options) {
+        Write-Warning "Options parameter is obsolete (though still supported). Add those as actual arguments instead."
+        $command += " " + $options
+    }
+    
+    Invoke-External $command
 }
 
 function Send-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $packagePath,
     [Parameter(Mandatory=$true)][uri] $serverUrl
 ) {
-  Write-Host "$nuget push $packagePath -s $serverUrl"
-  &$nuget push $packagePath -s $serverUrl
+    Write-Warning "Send-NuGetPackage is obsolete, use Publish-NuGetPackage instead."
+    Publish-NuGetPackage -PackagePath $packagePath -ServerUrl $serverUrl
+}
+
+function Publish-NuGetPackage(
+    [Parameter(Mandatory=$true)][string] $packagePath,
+    [Parameter(Mandatory=$true)][uri] $serverUrl
+) {
+    Import-Module PowerUpUtilities
+    Invoke-External "$nuget push `"$packagePath`" -s $serverUrl"
 }
 
 function Restore-NuGetPackages(
@@ -119,8 +136,9 @@ function Install-NuGetPackage(
 }
 
 export-modulemember -function Update-NuGet,
-                              Restore-NuGetPackages,
-                              Update-NuSpecFromFiles,
-                              New-NuGetPackage,
-                              Send-NuGetPackage,
-                              Install-NuGetPackage
+                               Restore-NuGetPackages,
+                               Update-NuSpecFromFiles,
+                               New-NuGetPackage,
+                               Send-NuGetPackage,
+                               Install-NuGetPackage,
+                               Publish-NuGetPackage
