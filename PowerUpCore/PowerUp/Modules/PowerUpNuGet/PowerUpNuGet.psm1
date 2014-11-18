@@ -4,8 +4,7 @@ $ErrorActionPreference = 'Stop'
 $nuget = "$PSScriptRoot\NuGet.exe"
 
 function Update-NuGet() {
-    Write-Host "$nuget update -self"
-    &$nuget update -self
+    Invoke-NuGet "update -self"
 }
 
 function Update-NuSpecFromFiles(
@@ -68,40 +67,84 @@ function Get-AttributeValue(
 function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
     [Parameter(Mandatory=$true)][string] $outputDirectory,
-    [string] $options
+    [string] $options = $null,
+    [hashtable] $properties = $null,
+    [switch][boolean] $includeReferencedProjects = $false    
 ) {
-    $packCmd = "$nuget pack $nuspecPath -outputdirectory $outputDirectory"
-    if ($options) {
-        $packCmd += " " + $options
+    $command = "pack $nuspecPath -Outputdirectory $outputDirectory"
+    if ($includeReferencedProjects) { $command += " -IncludeReferencedProjects" }
+    if ($properties) {
+        $command += " -Properties "
+        $command += ($properties.GetEnumerator() | % { "$($_.Name)=$($_.Value)" }) -join ';'
     }
-    Write-Host $packCmd
-    Invoke-Expression $packCmd
+    if ($options) {
+        Write-Warning "Options parameter is obsolete (though still supported). Add those as actual arguments instead."
+        $command += " " + $options
+    }
+    
+    Invoke-NuGet $command
 }
 
 function Send-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $packagePath,
     [Parameter(Mandatory=$true)][uri] $serverUrl
 ) {
-  Write-Host "$nuget push $packagePath -s $serverUrl"
-  &$nuget push $packagePath -s $serverUrl
+    Write-Warning "Send-NuGetPackage is obsolete, use Publish-NuGetPackage instead."
+    Publish-NuGetPackage -PackagePath $packagePath -ServerUrl $serverUrl
+}
+
+function Publish-NuGetPackage(
+    [Parameter(Mandatory=$true)][string] $packagePath,
+    [Parameter(Mandatory=$true)][uri] $serverUrl
+) {
+    Invoke-NuGet "push `"$packagePath`" -s $serverUrl"
 }
 
 function Restore-NuGetPackages(
     [Parameter(Mandatory=$true)][uri[]] $serverUrls
 ) {
-	$source = $serverUrls -join ';'
-	Invoke-NuGet "restore -source $source"
+    $source = $serverUrls -join ';'
+    Invoke-NuGet "restore -source $source"
 }
 
-function Invoke-NuGet(
-	[string] $parameters
+function Install-NuGetPackage(
+    [Parameter(Mandatory=$true)][string] $name,
+    [string] $outputDirectory,
+    [version] $version,
+    [uri] $server
 ) {
-	$command = "$nuget"
-	if ($parameters) {
-		$command += " " + $parameters
-	}
-	Write-Host "$command"
-	Invoke-Expression $command
+    $command = "install `"$name`""
+    if ($outputDirectory) {
+        $outputDirectory = (Get-Item $outputDirectory).FullName
+        $command += " -OutputDirectory `"$outputDirectory`""
+    }
+    
+    if ($version) {
+        $command += " -Version $version"
+    }
+    
+    if ($server) {
+        $server += " -Source $server"
+    }
+    
+    Invoke-NuGet $command
 }
 
-export-modulemember -function Update-NuGet, Restore-NuGetPackages, Update-NuSpecFromFiles, New-NuGetPackage, Send-NuGetPackage, Invoke-NuGet
+function Invoke-NuGet([string] $parameters) {
+    Import-Module PowerUpUtilities
+
+    $command = "$nuget"
+    if ($parameters) {
+        $command += " " + $parameters
+    }
+    Invoke-External $command
+}
+
+export-modulemember -function Update-NuGet,
+                              Restore-NuGetPackages,
+                              Update-NuSpecFromFiles,
+                              New-NuGetPackage,
+                              Send-NuGetPackage,
+                              Publish-NuGetPackage,
+                              Install-NuGetPackage,
+                              Invoke-NuGet

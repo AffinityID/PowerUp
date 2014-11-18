@@ -2,6 +2,7 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = "Stop"
 
 function Invoke-Combo-NuGet([Parameter(Mandatory=$true)][hashtable] $options) {
+    Write-Warning "Invoke-Combo-NuGet is obsolete: use New-NuGetPackage in build phase to generate packages and Publish-NuGetPackage during deployemnt."
     import-module PowerUpNuGet
 
     Write-Host "NuGet options: $($options | Out-String)"

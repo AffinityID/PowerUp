@@ -51,38 +51,6 @@ if ($LoadAsSnapin)
     }
 }
 
-function StopAppPoolAndSite($appPoolName, $siteName)
-{
-	StopAppPool($appPoolName)
-	StopSite($siteName)
-}
-
-function StartAppPoolAndSite($appPoolName, $siteName)
-{
-	StartSite($siteName)
-	StartAppPool($appPoolName)
-}
-
-function StopSite($siteName)
-{	
-	StopWebItem $sitesPath $siteName
-}
-
-function StopAppPool($appPoolName)
-{	
-	StopWebItem $appPoolsPath $appPoolName
-}
-
-function StartSite($siteName)
-{	
-	StartWebItem $sitesPath $siteName
-}
-
-function StartAppPool($appPoolName)
-{	
-	StartWebItem $appPoolsPath $appPoolName
-}
-
 function CreateAppPool($appPoolName)
 {	
 	if (!(WebItemExists $appPoolsPath $appPoolName))
@@ -157,19 +125,6 @@ function CreateSslBinding($certificate, $ip, $port)
 	set-location $existingPath
 }
 
-
-function StopWebItem($itemPath, $itemName)
-{
-	if (WebItemExists $itemPath $itemName)
-	{
-		$state = (Get-WebItemState $itemPath\$itemName).Value
-		if ($state -eq "started")
-		{
-			Stop-WebItem $itemPath\$itemName
-		}
-	}
-}
-
 function set-webapppool32bitcompatibility($appPoolName)
 {
 	$appPool = Get-Item $appPoolsPath\$appPoolName
@@ -184,18 +139,69 @@ function SetAppPoolProperties($appPoolName, $pipelineMode, $runtimeVersion)
 	SetAppPoolManagedRuntimeVersion $appPool $runtimeVersion
 	$appPool | set-item
 }
- 
 
-function StartWebItem($itemPath, $itemName)
-{
-	if (WebItemExists $itemPath $itemName)
-	{
-		$state = (Get-WebItemState $itemPath\$itemName).Value
-		if ($state -eq "stopped")
-		{
-			Start-WebItem $itemPath\$itemName
-		}
-	}
+function StopWebItemInternal(
+    [Parameter(Mandatory=$true)] [string] $itemType,
+    [Parameter(Mandatory=$true)] [string] $itemPath,
+    [Parameter(Mandatory=$true)] [string] $itemName
+) {
+    if (!(WebItemExists $itemPath $itemName)) {
+        Write-Warning "$itemType '$itemName' was not found and cannot be stopped."
+        return
+    }
+    
+    $state = (Get-WebItemState $itemPath\$itemName).Value
+    if ($state -eq 'Starting') {
+        Write-Host "$itemType '$itemName' is '$state': waiting to complete."
+        $state = (WaitForWebItemStateChange "$itemPath\$itemName" $state)
+    }
+    
+    if ($state -ne 'Started') {
+        Write-Warning "$itemType '$itemName' is '$state': stop is not applicable."
+        return
+    }
+    
+    Write-Host "Stopping $itemType '$itemName'."
+    Stop-WebItem $itemPath\$itemName
+}
+ 
+function StartWebItemInternal(
+    [Parameter(Mandatory=$true)] [string] $itemType,
+    [Parameter(Mandatory=$true)] [string] $itemPath,
+    [Parameter(Mandatory=$true)] [string] $itemName
+) {
+    if (!(WebItemExists $itemPath $itemName)) {
+        throw "$itemType '$itemName' was not found and cannot be started."
+        return;
+    }
+    
+    $state = (Get-WebItemState $itemPath\$itemName).Value
+    if ($state -eq 'Stopping') {
+        Write-Host "$itemType '$itemName' is '$state': waiting to complete."
+        $state = (WaitForWebItemStateChange "$itemPath\$itemName" $state)
+    }
+    
+    if ($state -ne 'Stopped') {
+        Write-Warning "$itemType '$itemName' is '$state': start is not applicable."
+        return
+    }
+    
+    Write-Host "Starting $itemType '$itemName'."
+    Start-WebItem $itemPath\$itemName
+}
+
+function WaitForWebItemStateChange(
+    [Parameter(Mandatory=$true)] [string] $itemFullPath,
+    [Parameter(Mandatory=$true)] [string] $currentState
+) {
+    $newState = $currentState
+    while ($newState -eq $currentState) {
+        Write-Host "Waiting for 30 seconds..."
+        Start-Sleep -Seconds 30
+        $newState = (Get-WebItemState $itemFullPath).Value
+    }
+    
+    return $newState
 }
 
 function WebItemExists($rootPath, $itemName)
@@ -332,30 +338,38 @@ function new-webapplication($websiteName, $appPoolName, $subPath, $physicalPath)
 	New-Item $sitesPath\$websiteName\$subPath -physicalPath $physicalPath -applicationPool $appPoolName -type Application 
 }
 
-function Stop-AppPool($appPoolName)
-{
-	write-host "Stopping app pool $appPoolName"
-	StopAppPool($appPoolName)	
+function Stop-AppPool($name) {
+    StopWebItemInternal AppPool $appPoolsPath $name
 }
 
-function Stop-AppPoolAndSite($appPoolName, $siteName)
-{
-	write-host "Stopping app pool $appPoolName and site $siteName"
-	StopAppPool($appPoolName)
-	StopSite($siteName)
+# TODO rename to something with WebSite, though Stop-WebSite is taken by IIS snap-in
+function Stop-Site([Parameter(Mandatory=$true)] [string] $siteName) {
+    StopWebItemInternal Site $sitesPath $siteName
 }
 
-function Start-AppPool($appPoolNamee)
-{
-	write-host "Starting app pool $appPoolName"
-	StartSite($siteName)
+function Stop-AppPoolAndSite(
+    [Parameter(Mandatory=$true)] [string] $appPoolName,
+    [Parameter(Mandatory=$true)] [string] $siteName
+) {
+    Stop-AppPool $appPoolName
+    Stop-Site $siteName
 }
 
-function Start-AppPoolAndSite($appPoolName, $siteName)
-{
-	write-host "Starting app pool $appPoolName and site $siteName"
-	StartSite($siteName)
-	StartAppPool($appPoolName)
+function Start-AppPool([Parameter(Mandatory=$true)] [string] $name) {
+    StartWebItemInternal AppPool $appPoolsPath $name
+}
+
+# TODO rename to something with WebSite, though Start-WebSite is taken by IIS snapin
+function Start-Site ([Parameter(Mandatory=$true)] [string] $name) {
+    StartWebItemInternal Site $sitesPath $name
+}
+
+function Start-AppPoolAndSite(
+    [Parameter(Mandatory=$true)] [string] $appPoolName,
+    [Parameter(Mandatory=$true)] [string] $siteName
+) {
+    Start-Site $siteName
+    Start-AppPool $appPoolName
 }
 
 function set-apppoolidentitytouser($appPoolName, $userName, $password)
@@ -445,11 +459,11 @@ export-modulemember -function set-webapppool32bitcompatibility,
                                new-webapplication,
                                new-virtualdirectory,
                                Register-VirtualDirectory,
-                               start-apppoolandsite,
-                               start-apppool,
-                               start-site,
-                               stop-apppool,
-                               stop-apppoolandsite,
+                               Start-AppPoolAndSite,
+                               Start-AppPool,
+                               Start-Site,
+                               Stop-AppPool,
+                               Stop-AppPoolAndSite,
                                set-website,
                                uninstall-website,
                                set-webapppool,

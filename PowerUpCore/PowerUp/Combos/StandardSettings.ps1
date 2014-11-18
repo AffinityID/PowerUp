@@ -29,7 +29,7 @@ function getPlainTextSettings($parameter, $fileName)
 function Import-PowerUpProfileSettings() {
     Import-Module PowerUpSettings
 
-    $profileSettings = &$deploymentProfileSettingsScriptBlock ${deployment.profile}
+    $profileSettings = &$deploymentProfileSettingsScriptBlock ${powerup.profile}
     if (!$profileSettings)
     {
         $profileSettings = @{}

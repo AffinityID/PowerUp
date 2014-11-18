@@ -1,5 +1,12 @@
-param($installPath, $toolsPath, $package, $project)
+param (
+    [Parameter(Mandatory=$true)][string] $installPath,
+    $toolsPath,
+    $package,
+    $project
+)
+
 Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
 
 Import-Module .\_powerup\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
-Copy-Directory $installPath\PowerUp .\_powerup
+Invoke-Robocopy $installPath\PowerUp\Modules\PowerUpSvn .\_powerup\Modules\PowerUpSvn "/purge /s /np /ns /njh /njs /ndl"

@@ -7,17 +7,18 @@ Import-Module PowerUpFileSystem
 Import-Module PowerUpZip
 Import-Module PowerUpNuGet
 
-$packageDirectory = "_package"
 $testResultsDirectory = "_testresults"
 
 properties {
-    $NuGetServers = @('https://nuget.org');
+    $NuGetServers = ('https://nuget.org')
+    $IntermediateRoot = '_buildtemp'
+    $PackageRoot = '_package'
 
-    $MSBuildArgs = '';
+    $MSBuildArgs = ''
     
-    $TestRoot = '.tests';
-	
-    $PackageStucture = @();
+    $TestRoot = '.tests'
+
+    $PackageStucture = @()
     $StandardWebExcludes = @(
         "*.cs",
         "*.csproj",
@@ -31,14 +32,15 @@ properties {
 
 task Clean {
     Remove-DirectoryFailSafe $testResultsDirectory
-    Remove-DirectoryFailSafe $packageDirectory
+    Remove-DirectoryFailSafe $PackageRoot
 }
 
 task RestorePackages {
-	Restore-NuGetPackages $NuGetServers
+    Restore-NuGetPackages $NuGetServers
 }
 
-task Build {    
+task Build {
+    Ensure-Directory $IntermediateRoot
     $MSBuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=Release") + $MSBuildArgs
     Invoke-External msbuild $MSBuildArgsFull
 }
@@ -57,11 +59,11 @@ task Test {
     if ($anyTestError) {
         Write-Error "One of NUnit tests failed: $anyTestError" -ErrorAction Stop
     }
-	
-	Invoke-PesterTests $TestRoot -ErrorAction Continue -ErrorVariable testError
+
+    Invoke-PesterTests $TestRoot -ErrorAction Continue -ErrorVariable testError
     if ($testError) {
         $anyTestError = $testError
-    }	
+    }
 
     if ($anyTestError) {
         Write-Error "One of PowerShell tests failed: $anyTestError" -ErrorAction Stop
@@ -71,14 +73,14 @@ task Test {
 task Package {
     $PackageStructure | % {
         $exclude = if ($_.ContainsKey("Exclude")) { $_["Exclude"]; } else { @() }
-        Copy-FilteredDirectory .\$($_.SourcePath) .\_package\$($_.PackagePath) -excludeFilter $exclude
+        Copy-FilteredDirectory .\$($_.SourcePath) .\$PackageRoot\$($_.PackagePath) -excludeFilter $exclude
     }
     
-    Copy-Directory .\_templates\ .\_package\_templates
-    Copy-Item .\deploy.ps1 .\_package
-    Copy-Item .\settings.txt .\_package
-    Copy-Item .\servers.txt .\_package
+    Copy-Directory .\_templates\ .\$PackageRoot\_templates
+    Copy-Item .\deploy.ps1 .\$PackageRoot
+    Copy-Item .\settings.txt .\$PackageRoot
+    Copy-Item .\servers.txt .\$PackageRoot
 
-    $zip = ".\_package\package_${build.number}.zip"
-    Compress-ZipFile .\_package\* $zip
+    $zip = ".\$PackageRoot\package_${build.number}.zip"
+    Compress-ZipFile .\$PackageRoot\* $zip
 }
