@@ -44,7 +44,7 @@ function Invoke-Robocopy(
     [Parameter(Mandatory=$true)] [string] $destinationDirectory,
     [string] $options = ''
 ) {
-    $command = "$PSScriptRoot\robocopy.exe $options `"$sourceDirectory`" `"$destinationDirectory`""
+    $command = "$PSScriptRoot\robocopy.exe `"$sourceDirectory`" `"$destinationDirectory`" $options"
     Write-Host $command
     Invoke-Expression $command
     if ($LastExitCode -ge 8) {
