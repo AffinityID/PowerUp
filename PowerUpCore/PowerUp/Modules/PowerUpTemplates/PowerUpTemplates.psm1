@@ -32,7 +32,30 @@ function Expand-Template($path) {
     Write-Host "Expanding template '$path'"
     $content = [IO.File]::ReadAllText($path)
     $errors = @()
-    $content = [regex]::Replace($content, '\$(?:{.*}|\(.*\))', {
+    $regex = New-Object Regex(
+@'
+    \$
+    (?:
+        \{
+          [^{}]*
+          (?:
+            (?:(?<CurlyOpen>\{)[^{}]*)+
+            (?:(?<CurlyClose-CurlyOpen>\})[^{}]*)+
+          )*
+          (?(CurlyOpen)(?!))
+        \}
+        |
+        \(
+          [^()]*
+          (?:
+            (?:(?<ParenOpen>\()[^()]*)+
+            (?:(?<ParenClose-ParenOpen>\))[^()]*)+
+          )*
+          (?(ParenOpen)(?!))
+        \)
+    )
+'@, [Text.RegularExpressions.RegexOptions]::IgnorePatternWhitespace)
+    $content = $regex.Replace($content, {
         param ($match)
         try {
             $result = (Invoke-Expression "Set-StrictMode -Version 2; `$ErrorActionPreference = 'Stop'; `"$($match.Value)`"")
