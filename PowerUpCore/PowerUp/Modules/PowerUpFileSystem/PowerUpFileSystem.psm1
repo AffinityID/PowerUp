@@ -24,29 +24,32 @@ function ReplaceDirectory([string]$sourceDirectory, [string]$destinationDirector
 function RobocopyDirectory([string]$sourceDirectory, [string]$destinationDirectory)
 {
 	Write-Host "copying newer files from $sourceDirectory to $destinationDirectory"
-	& "$PSScriptRoot\robocopy.exe" /E /np /njh /nfl /ns /nc $sourceDirectory $destinationDirectory 
+	Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc"
 	
-	if ($lastexitcode -lt 8)
-	{
-		Write-Host "Successfully copied to $destinationDirectory "
-		cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
-	}		
+	Write-Host "Successfully copied to $destinationDirectory "
+	cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
 }
 
 function Copy-MirroredDirectory([string]$sourceDirectory, [string]$destinationDirectory)
 {
 	Write-Host "Mirroring $sourceDirectory to $destinationDirectory"
-	& "$PSScriptRoot\robocopy.exe" /E /np /njh /nfl /ns /nc /mir $sourceDirectory $destinationDirectory 
+	Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc /mir"
 	
-	if ($lastexitcode -lt 8)
-	{
-		Write-Host "Successfully mirrored to $destinationDirectory "
-		cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
-	}
-	else
-	{
-		throw "Robocopy failed to mirror to $destinationDirectory. Exited with exit code $lastexitcode"
-	}
+	Write-Host "Successfully mirrored to $destinationDirectory "
+	cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
+}
+
+function Invoke-Robocopy(
+    [Parameter(Mandatory=$true)] [string] $sourceDirectory,
+    [Parameter(Mandatory=$true)] [string] $destinationDirectory,
+    [string] $options = ''
+) {
+    $command = "$PSScriptRoot\robocopy.exe $options `"$sourceDirectory`" `"$destinationDirectory`""
+    Write-Host $command
+    Invoke-Expression $command
+    if ($LastExitCode -ge 8) {
+        throw "Robocopy exited with exit code $LastExitCode"
+    }
 }
 
 function Write-FileToConsole([string]$fileName)
@@ -213,6 +216,7 @@ Export-ModuleMember -Alias * -Function  Write-FileToConsole,
                                         Grant-PathFullControl,
                                         CreateFile,
                                         DeleteFile,
+                                        Invoke-Robocopy,
                                         RobocopyDirectory,
                                         Copy-FilteredDirectory,
                                         Remove-DirectoryFailSafe

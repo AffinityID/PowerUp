@@ -1,0 +1,20 @@
+Default
+    project.name                        MyProject
+    domain.name                         myproject.${domain.suffix}
+    website.name                        ${domain.name}
+    execute.remotely                    true
+    database.name                       ${project.name}
+    database.connectionString           data source=${database.server};initial catalog=${database.name};integrated security=SSPI   
+
+Local
+    execute.remotely                    false
+    domain.suffix                       local
+    web.server                          localhost
+    database.server                     localhost
+    website.deployment.folder.root      c:\WebApps
+
+Development
+    domain.suffix                       dev
+    web.server                          someserver
+    database.server                     someserver
+    website.deployment.folder.root      x:\WebApps
