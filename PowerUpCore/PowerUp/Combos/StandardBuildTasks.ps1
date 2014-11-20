@@ -80,7 +80,15 @@ task Package {
     Copy-Item .\deploy.ps1 .\$PackageRoot
     Copy-Item .\settings.txt .\$PackageRoot
     Copy-Item .\servers.txt .\$PackageRoot
-
+	CreatePackageIdFile ".\$PackageRoot"
+	
     $zip = ".\$PackageRoot\package_${build.number}.zip"
     Compress-ZipFile .\$PackageRoot\* $zip
+}
+
+function CreatePackageIdFile([string]$directory){
+	New-Item $directory\package.id -type file
+	Add-Content $directory\package.id "PackageInformation"
+	Add-Content $directory\package.id "`tpackage.build`t${build.number}"
+	Add-Content $directory\package.id "`tpackage.date`t$(Get-Date -Format yyyyMMd-HHmm)"
 }
