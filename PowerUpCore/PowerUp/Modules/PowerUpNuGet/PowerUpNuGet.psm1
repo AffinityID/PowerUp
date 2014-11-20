@@ -2,9 +2,10 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 $nuget = "$PSScriptRoot\NuGet.exe"
+Add-Type -Path "$PSScriptRoot\NuGet.Core.dll"
 
 function Update-NuGet() {
-    Invoke-NuGet "update -self"
+    Write-Warning "Update-NuGet is obsolete and does nothing at the moment."
 }
 
 function Update-NuSpecFromFiles(
@@ -64,24 +65,44 @@ function Get-AttributeValue(
     return $attribute.$property
 }
 
+function Get-NuGetPackage(
+    # in future this could have alt paramset to get from a server
+    [string] $path
+) {
+    return New-Object NuGet.OptimizedZipPackage((Resolve-Path $path))
+}
+
+function Test-NuGetPackage(    
+    [Parameter(Mandatory=$true)] [string] $id,
+    [Parameter(Mandatory=$true)] [NuGet.SemanticVersion] $version,
+    [Parameter(Mandatory=$true)] [string] $source
+) {
+    # command-line is useless for this
+    return [NuGet.PackageRepositoryFactory]::Default.CreateRepository($source).Exists($id, $version);
+}
+
+
 function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
     [Parameter(Mandatory=$true)][string] $outputDirectory,
     [string] $options = $null,
     [hashtable] $properties = $null,
-    [switch][boolean] $includeReferencedProjects = $false    
+    [switch] $includeReferencedProjects = $false    
 ) {
-    $command = "pack $nuspecPath -Outputdirectory $outputDirectory"
-    if ($includeReferencedProjects) { $command += " -IncludeReferencedProjects" }
-    if ($properties) {
-        $command += " -Properties "
-        $command += ($properties.GetEnumerator() | % { "$($_.Name)=$($_.Value)" }) -join ';'
-    }
+    Import-Module PowerUpUtilities
+
+    $command = "pack $nuspecPath " + (Format-ExternalArguments @{
+        '-OutputDirectory' = $outputDirectory
+        '-IncludeReferencedProjects' = $includeReferencedProjects
+        '-Properties' = $(if ($properties) {
+            ($properties.GetEnumerator() | % { "$($_.Name)=$($_.Value)" }) -join ';'
+        })
+    })
     if ($options) {
         Write-Warning "Options parameter is obsolete (though still supported). Add those as actual arguments instead."
         $command += " " + $options
     }
-    
+
     Invoke-NuGet $command
 }
 
@@ -90,20 +111,20 @@ function Send-NuGetPackage(
     [Parameter(Mandatory=$true)][uri] $serverUrl
 ) {
     Write-Warning "Send-NuGetPackage is obsolete, use Publish-NuGetPackage instead."
-    Publish-NuGetPackage -PackagePath $packagePath -ServerUrl $serverUrl
+    Publish-NuGetPackage -PackagePath $packagePath -Source $serverUrl
 }
 
 function Publish-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $packagePath,
-    [Parameter(Mandatory=$true)][uri] $serverUrl
+    [Parameter(Mandatory=$true)][uri] $source
 ) {
-    Invoke-NuGet "push `"$packagePath`" -s $serverUrl"
+    Invoke-NuGet "push `"$packagePath`" -s $source"
 }
 
 function Restore-NuGetPackages(
-    [Parameter(Mandatory=$true)][uri[]] $serverUrls
+    [Parameter(Mandatory=$true)][string[]] $sources
 ) {
-    $source = $serverUrls -join ';'
+    $source = $sources -join ';'
     Invoke-NuGet "restore -source $source"
 }
 
@@ -111,7 +132,7 @@ function Install-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $name,
     [string] $outputDirectory,
     [version] $version,
-    [uri] $server
+    [string] $source
 ) {
     $command = "install `"$name`""
     if ($outputDirectory) {
@@ -123,8 +144,8 @@ function Install-NuGetPackage(
         $command += " -Version $version"
     }
     
-    if ($server) {
-        $server += " -Source $server"
+    if ($source) {
+        $server += " -Source $source"
     }
     
     Invoke-NuGet $command
@@ -141,6 +162,8 @@ function Invoke-NuGet([string] $parameters) {
 }
 
 export-modulemember -function Update-NuGet,
+                              Get-NuGetPackage,
+                              Test-NuGetPackage,
                               Restore-NuGetPackages,
                               Update-NuSpecFromFiles,
                               New-NuGetPackage,

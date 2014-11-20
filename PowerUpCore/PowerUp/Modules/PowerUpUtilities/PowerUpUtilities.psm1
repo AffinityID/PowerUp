@@ -92,4 +92,26 @@ function Invoke-External {
     }
 }
 
-Export-ModuleMember -function Merge-Defaults, Use-Object, Invoke-External
+function Format-ExternalArguments(
+    [Parameter(Mandatory=$true)] [hashtable] $arguments
+) {
+    $parts = $arguments.GetEnumerator() | 
+        ? {
+            $value = $_.Value
+            return ($value -ne $null) -and
+                    ($value -ne '') -and
+                    ($value -isnot [switch] -or $value)
+        } |
+        % { 
+            $argument = $_.Key
+            if ($_.Value -isnot [switch]) {
+                $argument += " " + $_.Value
+            }
+            
+            return $argument
+        }
+        
+    return $parts -join ' '
+}
+
+Export-ModuleMember -function Merge-Defaults, Use-Object, Invoke-External, Format-ExternalArguments
