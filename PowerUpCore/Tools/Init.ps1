@@ -9,8 +9,12 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 Import-Module $installPath\PowerUp\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
-$externals = if (Test-Path  '.\_powerup\Modules') { (Get-Item .\_powerup\Modules\*\.PowerUpExternal | % { $_.Directory }) }
-             else { @() }
+if (Test-Path  '.\_powerup\Modules') {
+    $externals = (Get-Item .\_powerup\Modules\*\.PowerUpExternal | % { $_.Directory })
+}
+else {
+    $externals = @()
+}
 
 if ($externals) {
     Write-Host "External modules:"
