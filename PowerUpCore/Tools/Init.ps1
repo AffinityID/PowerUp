@@ -11,6 +11,9 @@ $ErrorActionPreference = 'Stop'
 Import-Module $installPath\PowerUp\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
 if (Test-Path  '.\_powerup\Modules') {
     $externals = (Get-Item .\_powerup\Modules\*\.PowerUpExternal | % { $_.Directory })
+    if ($externals -eq $null) { # PowerShell quirk?
+        $externals = @()
+    }
 }
 else {
     $externals = @()
