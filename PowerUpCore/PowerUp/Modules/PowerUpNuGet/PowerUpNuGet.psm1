@@ -124,8 +124,7 @@ function Publish-NuGetPackage(
 function Restore-NuGetPackages(
     [Parameter(Mandatory=$true)][string[]] $sources
 ) {
-    $source = $sources -join ';'
-    Invoke-NuGet "restore -source $source"
+    Invoke-NuGet "restore -source $(Join-NuGetSources $sources)"
 }
 
 function Install-NuGetPackage(
@@ -159,6 +158,12 @@ function Invoke-NuGet([string] $parameters) {
         $command += " " + $parameters
     }
     Invoke-External $command
+}
+
+function Join-NuGetSources(
+    [Parameter(Mandatory=$true)][string[]]$sources
+) {
+    return "`"$($sources -join ';')`""
 }
 
 export-modulemember -function Update-NuGet,
