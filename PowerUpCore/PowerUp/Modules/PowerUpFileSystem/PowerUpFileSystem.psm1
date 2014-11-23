@@ -10,24 +10,20 @@ function Ensure-Directory([string]$directory)
 	}
 }
 
-function ReplaceDirectory([string]$sourceDirectory, [string]$destinationDirectory)
-{
-	if (Test-Path $destinationDirectory -PathType Container)
-	{
-		Write-Host "Removing folder"
-		Remove-Item $destinationDirectory -recurse -force
-	}
-	Write-Host "Copying files"
-	Copy-Item $sourceDirectory\ -destination $destinationDirectory\ -container:$false -recurse -force
+function Reset-Directory([Parameter(Mandatory=$true)][string] $path) {
+    Remove-DirectoryFailSafe $path
+    Write-Host "Creating directory $path"
+    New-Item $path -Type Directory
 }
 
-function RobocopyDirectory([string]$sourceDirectory, [string]$destinationDirectory)
-{
-	Write-Host "copying newer files from $sourceDirectory to $destinationDirectory"
-	Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc"
-	
-	Write-Host "Successfully copied to $destinationDirectory "
-	cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
+function Copy-Directory([string]$sourceDirectory, [string]$destinationDirectory) {
+    Write-Warning "Copy-Directory is obsolete, use Invoke-Robocopy instead for better control."
+    
+    Write-Host "copying newer files from $sourceDirectory to $destinationDirectory"
+    Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc"
+
+    Write-Host "Successfully copied to $destinationDirectory "
+    cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
 }
 
 function Copy-MirroredDirectory([string]$sourceDirectory, [string]$destinationDirectory)
@@ -70,32 +66,6 @@ function Write-FileToConsole([string]$fileName)
 	else
 	{
 	   write-host "Source file ($fileName) dose not exist." 
-	}
-}
-
-function CreateFile([string]$filePath)
-{
-    Write-Warning "CreateFile is obsolete, just use New-Item instead."
-	if (Test-Path $filePath)
-	{
-		Write-Host "The file $filePath already exists"
-	}
-	else{
-		New-Item $filePath -type file
-		Write-Host "The file $filePath has been created"
-	}
-}
-
-function DeleteFile([string]$filePath)
-{
-    Write-Warning "DeleteFile is obsolete, just use Remove-Item instead."
-	if (!(Test-Path $filePath))
-	{
-		Write-Host "The file $filePath dose not exist"
-	}
-	else{
-		Remove-Item $filePath -recurse
-		Write-Host "The file $filePath has been deleted"
 	}
 }
 
@@ -208,15 +178,12 @@ function Remove-NonRecursiveFailSafeInternal(
     }
 }
 
-Set-Alias Copy-Directory RobocopyDirectory
-
 Export-ModuleMember -Alias * -Function  Write-FileToConsole,
                                         Ensure-Directory,
+                                        Copy-Directory,
                                         Copy-MirroredDirectory,
                                         Grant-PathFullControl,
-                                        CreateFile,
-                                        DeleteFile,
                                         Invoke-Robocopy,
-                                        RobocopyDirectory,
                                         Copy-FilteredDirectory,
-                                        Remove-DirectoryFailSafe
+                                        Remove-DirectoryFailSafe,
+                                        Reset-Directory
