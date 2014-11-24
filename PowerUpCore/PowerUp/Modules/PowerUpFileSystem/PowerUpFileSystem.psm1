@@ -47,6 +47,7 @@ function Invoke-Robocopy(
     [switch] $copyDirectories,
     [switch] $copyDirectoriesIncludingEmpty,
     [string[]] $excludeDirectories,
+    [string[]] $excludeFiles,
     [switch] $excludeExtra,
     [switch] $excludeChanged,
     [switch] $excludeNewer,
@@ -59,14 +60,15 @@ function Invoke-Robocopy(
     [switch] $noJobSummary
 ) {
     Import-Module PowerUpUtilities
-    
+
     $options += (Format-ExternalArguments @{
         '/e'     = $copyDirectoriesIncludingEmpty
         '/s'     = $copyDirectories
         '/purge' = $purge
         '/mir'   = $mirror
         
-        '/xd'    = $(if ($excludeDirectories) { ($excludeDirectories | % { "`"$(Resolve-Path $_)`"" }) -Join ' ' } else { $null })
+        '/xd'    = $(if ($excludeDirectories) { ($excludeDirectories | % { "`"$_`"" }) -Join ' ' } else { $null })
+        '/xf'    = $(if ($excludeFiles) { ($excludeFiles | % { "`"$_`"" }) -Join ' ' } else { $null })
         
         '/xx'    = $excludeExtra
         '/xc'    = $excludeChanged
