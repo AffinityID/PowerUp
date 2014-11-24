@@ -85,15 +85,21 @@ function Test-NuGetPackage(
 function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
     [Parameter(Mandatory=$true)][string] $outputDirectory,
-    [string] $options = $null,
-    [hashtable] $properties = $null,
-    [switch] $includeReferencedProjects = $false    
+    [string] $options,
+    [NuGet.SemanticVersion] $version,
+    [hashtable] $properties,
+    [switch] $noPackageAnalysis,
+    [switch] $noDefaultExcludes,
+    [switch] $includeReferencedProjects
 ) {
     Import-Module PowerUpUtilities
 
     $command = "pack $nuspecPath " + (Format-ExternalArguments @{
+        '-Version' = $version
         '-OutputDirectory' = $outputDirectory
         '-IncludeReferencedProjects' = $includeReferencedProjects
+        '-NoPackageAnalysis' = $noPackageAnalysis
+        '-NoDefaultExcludes' = $noDefaultExcludes
         '-Properties' = $(if ($properties) {
             ($properties.GetEnumerator() | % { "$($_.Name)=$($_.Value)" }) -join ';'
         })

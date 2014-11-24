@@ -8,7 +8,9 @@ param (
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-Import-Module $installPath\PowerUp\Modules\PowerUpFileSystem\PowerUpFileSystem.psm1
+$env:PSModulePath += ";$installPath\PowerUp\Modules"
+
+Import-Module PowerUpFileSystem
 if (Test-Path  '.\_powerup\Modules') {
     $externals = (Get-Item .\_powerup\Modules\*\.PowerUpExternal | % { $_.Directory })
     if ($externals -eq $null) { # PowerShell quirk?
@@ -24,10 +26,21 @@ if ($externals) {
     $externals | % { Write-Host "  $($_.Name)" }
 }
 
-$externalsString = ($externals | % { "`"$($_.FullName)`"" }) -join ' '
-Invoke-Robocopy $installPath\PowerUp .\_powerup "/purge /s /np /ns /njh /njs /ndl /xd $externalsString"
+Invoke-Robocopy $installPath\PowerUp .\_powerup `
+    -Purge -CopyDirectories `
+    -ExcludeDirectories @($externals | % { "`"$($_.FullName)`"" }) `
+    -NoFileSize -NoProgress -NoDirectoryList -NoJobHeader -NoJobSummary
 
 if (!(Test-Path ".\powerup.bat")) {
+    New-Item _templates -Type Directory | Out-Null
+    Invoke-Robocopy . _templates -Files *.config `
+        -CopyDirectories `
+        -ExcludeDirectories _templates -ExcludeExtra -ExcludeChanged -ExcludeNewer -ExcludeOlder `
+        -NoDirectoryList -NoJobHeader -NoJobSummary
+    
     # Test-Path is so that other files can be deleted if not needed
-    Invoke-Robocopy $installPath\RootFiles . "/xx /xc /xn /xo /np /ns /njh /njs"
+    Invoke-Robocopy $installPath\RootFiles . `
+        -CopyDirectoriesIncludingEmpty `
+        -ExcludeExtra -ExcludeChanged -ExcludeNewer -ExcludeOlder `
+        -NoFileSize -NoProgress -NoJobHeader -NoJobSummary
 }
