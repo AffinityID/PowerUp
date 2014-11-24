@@ -6,17 +6,20 @@ Import-Module PowerUpTestRunner
 Import-Module PowerUpFileSystem
 Import-Module PowerUpZip
 Import-Module PowerUpNuGet
+Import-Module TestCombos
 
 $testResultsDirectory = "_testresults"
 
 properties {
+    $Configuration = 'Release'
+
     $NuGetServers = ('https://nuget.org')
     $IntermediateRoot = '_buildtemp'
     $PackageRoot = '_package'
 
     $MSBuildArgs = ''
-    
-    $TestRoot = '.tests'
+
+    $TestOptions = @{}
 
     $PackageStucture = @()
     $StandardWebExcludes = @(
@@ -41,33 +44,21 @@ task RestorePackages {
 
 task Build {
     Ensure-Directory $IntermediateRoot
-    $MSBuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=Release") + $MSBuildArgs
+    $MSBuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=$Configuration") + $MSBuildArgs
     Invoke-External msbuild $MSBuildArgsFull
 }
 
 task Test {
-    $anyTestError = $null
-    Get-ChildItem -Recurse -Path $TestRoot -Include "*Tests*.dll" |
-        ? { $_.FullName -match "bin\\Release" } | # not great, but Split-Path would be much harder
-        % { 
-            Invoke-NUnitTests $_ -ErrorAction Continue -ErrorVariable testError
-            if ($testError) {
-                $anyTestError = $testError
-            }
+    Merge-Defaults $TestOptions @{
+        default = @{
+            rootpath = '.tests'
         }
-
-    if ($anyTestError) {
-        Write-Error "One of NUnit tests failed: $anyTestError" -ErrorAction Stop
+        nunit = @{
+            filefilter = '*Tests*.dll'
+            pathfilter = "bin\$Configuration"
+        }
     }
-
-    Invoke-PesterTests $TestRoot -ErrorAction Continue -ErrorVariable testError
-    if ($testError) {
-        $anyTestError = $testError
-    }
-
-    if ($anyTestError) {
-        Write-Error "One of PowerShell tests failed: $anyTestError" -ErrorAction Stop
-    }
+    Invoke-ComboTests $TestOptions
 }
 
 task Package {
@@ -79,16 +70,18 @@ task Package {
     Copy-Directory .\_templates\ .\$PackageRoot\_templates
     Copy-Item .\deploy.ps1 .\$PackageRoot
     Copy-Item .\settings.txt .\$PackageRoot
-    Copy-Item .\servers.txt .\$PackageRoot
-	CreatePackageIdFile ".\$PackageRoot"
-	
+    
+    if (Test-Path .\servers.txt) {
+        Copy-Item .\servers.txt .\$PackageRoot
+    }
+    CreatePackageIdFile ".\$PackageRoot"
     $zip = ".\$PackageRoot\package_${build.number}.zip"
     Compress-ZipFile .\$PackageRoot\* $zip
 }
 
-function CreatePackageIdFile([string]$directory){
-	New-Item $directory\package.id -type file
-	Add-Content $directory\package.id "PackageInformation"
-	Add-Content $directory\package.id "`tpackage.build`t${build.number}"
-	Add-Content $directory\package.id "`tpackage.date`t$(Get-Date -Format yyyyMMd-HHmm)"
+function CreatePackageIdFile([string]$directory) {
+    New-Item $directory\package.id -type file
+    Add-Content $directory\package.id "PackageInformation"
+    Add-Content $directory\package.id "`tpackage.build`t${build.number}"
+    Add-Content $directory\package.id "`tpackage.date`t$(Get-Date -Format yyyyMMd-HHmm)"
 }
