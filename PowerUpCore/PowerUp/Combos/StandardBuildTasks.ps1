@@ -67,7 +67,11 @@ task Package {
         Copy-FilteredDirectory .\$($_.SourcePath) .\$PackageRoot\$($_.PackagePath) -excludeFilter $exclude
     }
     
-    Copy-Directory .\_templates\ .\$PackageRoot\_templates
+    if (Test-Path .\_templates) {
+        Invoke-Robocopy .\_templates\ .\$PackageRoot\_templates `
+            -Mirror -CopyDirectories `
+            -NoFileSize -NoProgress -NoDirectoryList -NoJobHeader -NoJobSummary
+    }
     Copy-Item .\deploy.ps1 .\$PackageRoot
     Copy-Item .\settings.txt .\$PackageRoot
     
