@@ -10,7 +10,7 @@ function Invoke-NUnitTests {
         [Parameter(Mandatory=$true)] $testSuitePathObject,
         [string] $resultsDirectory = "_testresults"
     )
-    
+
     Import-Module PowerUpUtilities
 
     # Ensure results directory
@@ -30,14 +30,14 @@ function Invoke-PesterTests {
         [Parameter(Mandatory=$true)] $testSuitePathObject,
         [string] $resultsDirectory = "_testresults"
     )
-    
+
     # Ensure results directory
     if (!(Test-Path $resultsDirectory -PathType Container)) {
         New-Item $resultsDirectory -type directory
     }
-	
-	Import-Module $pesterTestRunnerModule -Global
-	Invoke-Pester -Path $testSuitePathObject -OutputXml "$resultsDirectory\pester.testresults.xml"
+
+    Import-Module $pesterTestRunnerModule -Global
+    Invoke-Pester -Path $testSuitePathObject -OutputXml "$resultsDirectory\pester.testresults.xml"
 }
 
 Export-ModuleMember -function Invoke-NUnitTests, Invoke-PesterTests
