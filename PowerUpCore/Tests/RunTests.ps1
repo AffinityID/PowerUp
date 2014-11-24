@@ -9,4 +9,4 @@ Import-Module PowerUpFileSystem
 Import-Module PowerUpTestRunner
 
 Reset-Directory $resultsPath
-Invoke-PesterTests . -ResultsDirectory $resultsPath
+Invoke-PesterTests $scriptPath -ResultsDirectory $resultsPath
