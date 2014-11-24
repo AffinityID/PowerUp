@@ -3,6 +3,10 @@ $ErrorActionPreference = 'Stop'
 
 $scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
 $env:PSModulePath += ";$scriptPath\..\PowerUp\Modules"
+$resultsPath = "$scriptPath\..\..\_testresults"
 
-Import-Module "$scriptPath\..\PowerUp\Modules\PowerUpTestRunner\Pester.3.0.0\Pester"
-Invoke-Pester -Path .
+Import-Module PowerUpFileSystem
+Import-Module PowerUpTestRunner
+
+Reset-Directory $resultsPath
+Invoke-PesterTests . -ResultsDirectory $resultsPath

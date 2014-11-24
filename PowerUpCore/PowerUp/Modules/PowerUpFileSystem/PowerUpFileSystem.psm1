@@ -6,14 +6,14 @@ function Ensure-Directory([string]$directory)
 	if (!(Test-Path $directory -PathType Container))
 	{
 		Write-Host "Creating folder $directory"
-		New-Item $directory -type directory
+		New-Item $directory -type directory | Out-Null
 	}
 }
 
 function Reset-Directory([Parameter(Mandatory=$true)][string] $path) {
     Remove-DirectoryFailSafe $path
     Write-Host "Creating directory $path"
-    New-Item $path -Type Directory
+    New-Item $path -Type Directory | Out-Null
 }
 
 function Copy-Directory([string]$sourceDirectory, [string]$destinationDirectory) {
