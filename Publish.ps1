@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)][string] $server,
-    [int] $buildNumber = 0,
+    [string] $buildNumber = 0,
     [string] $outputPath = ".\_output"
 )
 $version = "0.9.$buildNumber"

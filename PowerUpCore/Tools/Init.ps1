@@ -35,7 +35,9 @@ if (!(Test-Path ".\powerup.bat")) {
     New-Item _templates -Type Directory | Out-Null
     Invoke-Robocopy . _templates -Files *.config `
         -CopyDirectories `
-        -ExcludeDirectories _templates -ExcludeExtra -ExcludeChanged -ExcludeNewer -ExcludeOlder `
+        -ExcludeDirectories @('.nuget', '_powerup', '_templates', 'packages') `
+        -ExcludeFiles 'packages.config' `
+        -ExcludeExtra -ExcludeChanged -ExcludeNewer -ExcludeOlder `
         -NoDirectoryList -NoJobHeader -NoJobSummary
     
     # Test-Path is so that other files can be deleted if not needed

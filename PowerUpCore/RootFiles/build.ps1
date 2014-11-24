@@ -4,7 +4,9 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 properties {
-    $TestRoot = '.'
+    $TestOptions = @{
+        NUnit = @{ RootPath = '.' }
+    }
     $PackageStructure = @(
         @{
             SourcePath = 'Web'
