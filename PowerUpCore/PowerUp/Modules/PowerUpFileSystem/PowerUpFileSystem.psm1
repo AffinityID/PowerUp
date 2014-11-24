@@ -38,9 +38,51 @@ function Copy-MirroredDirectory([string]$sourceDirectory, [string]$destinationDi
 function Invoke-Robocopy(
     [Parameter(Mandatory=$true)] [string] $sourceDirectory,
     [Parameter(Mandatory=$true)] [string] $destinationDirectory,
-    [string] $options = ''
+    [string] $options = '',
+    
+    # TODO: add other arguments and obsolete $options
+    [string[]] $files,
+    [switch] $mirror,
+    [switch] $purge,
+    [switch] $copyDirectories,
+    [switch] $copyDirectoriesIncludingEmpty,
+    [string[]] $excludeDirectories,
+    [switch] $excludeExtra,
+    [switch] $excludeChanged,
+    [switch] $excludeNewer,
+    [switch] $excludeOlder,
+    [switch] $noProgress,
+    [switch] $noFileSize,
+    [switch] $noFileList,
+    [switch] $noDirectoryList,
+    [switch] $noJobHeader,
+    [switch] $noJobSummary
 ) {
-    $command = "$PSScriptRoot\robocopy.exe `"$sourceDirectory`" `"$destinationDirectory`" $options"
+    Import-Module PowerUpUtilities
+    
+    $options += (Format-ExternalArguments @{
+        '/e'     = $copyDirectoriesIncludingEmpty
+        '/s'     = $copyDirectories
+        '/purge' = $purge
+        '/mir'   = $mirror
+        
+        '/xd'    = $(if ($excludeDirectories) { ($excludeDirectories | % { "`"$(Resolve-Path $_)`"" }) -Join ' ' } else { $null })
+        
+        '/xx'    = $excludeExtra
+        '/xc'    = $excludeChanged
+        '/xn'    = $excludeNewer
+        '/xo'    = $excludeOlder
+        
+        '/np'    = $noProgress
+        '/ns'    = $noFileSize
+        '/nfl'   = $noFileList
+        '/ndl'   = $noDirectoryList
+        '/njh'   = $noJobHeader
+        '/njs'   = $noJobSummary
+    })
+
+    $filesString = ($files | % { "`"$_`"" }) -Join ' '
+    $command = "$PSScriptRoot\robocopy.exe `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"
     Write-Host $command
     Invoke-Expression $command
     if ($LastExitCode -ge 8) {
