@@ -114,4 +114,33 @@ function Format-ExternalArguments(
     return $parts -join ' '
 }
 
-Export-ModuleMember -function Merge-Defaults, Use-Object, Invoke-External, Format-ExternalArguments
+function Wait-Until(
+    [Parameter(Mandatory=$true)] [ScriptBlock] $condition,
+    [Parameter(Mandatory=$true)] [TimeSpan] $timeout,
+    [TimeSpan] $waitPeriod = (New-TimeSpan -Seconds 30),
+    [ScriptBlock] $beforeFirstWait
+) {
+    $start = Get-Date
+    $firstWait = $true
+    $waitSeconds = [Math]::Truncate($waitPeriod.TotalSeconds)
+    
+    while (!(&$condition)) {
+        if ((New-TimeSpan -Start $start) -gt $timeout) {
+            throw "Wait timed out."
+        }
+
+        if ($firstWait -and $beforeFirstWait) {
+            &$beforeFirstWait
+            $firstWait = $false
+        }        
+        
+        Write-Host "Waiting for $waitSeconds seconds..."
+        Start-Sleep $waitSeconds
+    }
+}
+
+Export-ModuleMember -function Merge-Defaults,
+                              Use-Object,
+                              Invoke-External,
+                              Format-ExternalArguments,
+                              Wait-Until
