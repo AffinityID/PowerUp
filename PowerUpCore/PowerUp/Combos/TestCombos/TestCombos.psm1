@@ -19,7 +19,7 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
             pathfilter = ''
         }
         Get-ChildItem -Recurse -Path $nunit.rootpath -Include $nunit.filefilter |
-            ? { $_.FullName -match $nunit.pathfilter } | # not great, but Split-Path would be much harder
+            ? { $_.FullName -match [regex]::Escape($nunit.pathfilter) } | # not great, but Split-Path would be much harder
             % { 
                 Invoke-NUnitTests $_ -ErrorAction Continue -ErrorVariable testError
                 if ($testError) {
