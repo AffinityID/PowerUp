@@ -149,20 +149,7 @@ function StopWebItemInternal(
         Write-Warning "$itemType '$itemName' was not found and cannot be stopped."
         return
     }
-    
-    $state = (Get-WebItemState $itemPath\$itemName).Value
-    if ($state -eq 'Starting') {
-        Write-Host "$itemType '$itemName' is '$state': waiting to complete."
-        $state = (WaitForWebItemStateChange "$itemPath\$itemName" $state)
-    }
-    
-    if ($state -ne 'Started') {
-        Write-Warning "$itemType '$itemName' is '$state': stop is not applicable."
-        return
-    }
-    
-    Write-Host "Stopping $itemType '$itemName'."
-    Stop-WebItem $itemPath\$itemName
+    StartOrStopExistingWebItemInternal $itemType $itemPath $itemName 'Stop' 'Stopping' 'Stopped'
 }
  
 function StartWebItemInternal(
@@ -174,34 +161,43 @@ function StartWebItemInternal(
         throw "$itemType '$itemName' was not found and cannot be started."
         return;
     }
+    StartOrStopExistingWebItemInternal $itemType $itemPath $itemName 'Start' 'Starting' 'Started'
+}
+
+function StartOrStopExistingWebItemInternal(
+    [Parameter(Mandatory=$true)] [string] $itemType,
+    [Parameter(Mandatory=$true)] [string] $itemPath,
+    [Parameter(Mandatory=$true)] [string] $itemName,
+    [Parameter(Mandatory=$true)] [string] $action,
+    [Parameter(Mandatory=$true)] [string] $progressing,
+    [Parameter(Mandatory=$true)] [string] $completed
+) {
+    Import-Module PowerUpUtilities
+    $getState = { (Get-WebItemState $itemPath\$itemName).Value }
+
+    $state = &$getState
+    Wait-Until { 
+        $state = &$getState
+        return $state -ne 'Starting' -and $state -ne 'Stopping'
+    } -BeforeFirstWait { 
+        Write-Host "$itemType '$itemName' is $state`: waiting to complete."
+    } -Timeout $(New-TimeSpan -Minutes 10)
     
-    $state = (Get-WebItemState $itemPath\$itemName).Value
-    if ($state -eq 'Stopping') {
-        Write-Host "$itemType '$itemName' is '$state': waiting to complete."
-        $state = (WaitForWebItemStateChange "$itemPath\$itemName" $state)
-    }
-    
-    if ($state -ne 'Stopped') {
-        Write-Warning "$itemType '$itemName' is '$state': start is not applicable."
+    $state = &$getState
+    if ($state -eq $completed) {
+        Write-Host "$itemType '$itemName' is already $completed`: $action not required."
         return
     }
     
-    Write-Host "Starting $itemType '$itemName'."
-    Start-WebItem $itemPath\$itemName
-}
+    Write-Host "$progressing $itemType '$itemName'."
+    Invoke-Expression "$action-WebItem `"$itemPath\$itemName`""
 
-function WaitForWebItemStateChange(
-    [Parameter(Mandatory=$true)] [string] $itemFullPath,
-    [Parameter(Mandatory=$true)] [string] $currentState
-) {
-    $newState = $currentState
-    while ($newState -eq $currentState) {
-        Write-Host "Waiting for 30 seconds..."
-        Start-Sleep -Seconds 30
-        $newState = (Get-WebItemState $itemFullPath).Value
-    }
-    
-    return $newState
+    Wait-Until {
+        $state = &$getState
+        return $state -eq $completed
+    } -BeforeFirstWait { 
+        Write-Host "Waiting until $itemType '$itemName' is $completed."
+    } -Timeout $(New-TimeSpan -Minutes 10)
 }
 
 function WebItemExists($rootPath, $itemName)
