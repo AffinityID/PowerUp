@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 
 function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
     Import-Module PowerUpUtilities
+    Import-Module PowerUpTestRunner
     Write-Host "Test options: $($options | Out-String)"
 
     $testErrors = @()
@@ -40,7 +41,7 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
         }
     }
     else {
-        Write-Host "SKipping Pester tests (not enabled in options)."
+        Write-Host "Skipping Pester tests (not enabled in options)."
     }
     
     if ($testErrors.Length -gt 0) {
