@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 
 task Build {
     Import-Module PowerUpMeta
-    Invoke-PowerUp build
+    Invoke-PowerUp build -Task Build
 }
 
 task Database {
@@ -64,4 +64,4 @@ task Hosts {
     Write-Host "* Registered ${domain.name} in hosts." -ForegroundColor Green
 }
 
-task Default -depends Build, Website, Database, Hosts
+task Default -depends Build, Database, Hosts, Website
