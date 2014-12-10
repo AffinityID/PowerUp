@@ -114,6 +114,21 @@ function Format-ExternalArguments(
     return $parts -join ' '
 }
 
+function Format-ExternalEscaped(
+    [Parameter(Mandatory=$true)] [string] $argument
+) {
+    if ($argument -eq $null -or $argument -eq '') {
+        return $argument
+    }
+    
+    if ($argument.Contains('"')) {
+        return "'$($argument.Replace('"', '\"').Replace("'", "''"))'"
+        # " # this comment is just a highlighting fix for notepad 2
+    }
+
+    return "`"$argument`""
+}
+
 function Wait-Until(
     [Parameter(Mandatory=$true)] [ScriptBlock] $condition,
     [Parameter(Mandatory=$true)] [TimeSpan] $timeout,
@@ -143,4 +158,5 @@ Export-ModuleMember -function Merge-Defaults,
                               Use-Object,
                               Invoke-External,
                               Format-ExternalArguments,
+                              Format-ExternalEscaped,
                               Wait-Until

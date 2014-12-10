@@ -65,7 +65,8 @@ function Add-SqlServerDatabaseUser(
 function Invoke-DatabaseMigrations(
     [Parameter(Mandatory=$true)][string] $assemblyPath,
     [Parameter(Mandatory=$true)][string] $connectionString,
-    [string] $provider = 'SqlServer'
+    [string] $provider = 'SqlServer',
+    [string] $context
 ) {
     Import-Module PowerUpNuGet
     Import-Module PowerUpUtilities
@@ -84,6 +85,13 @@ function Invoke-DatabaseMigrations(
         New-Item "$temp" -Type Directory
         Install-NuGetPackage 'FluentMigrator' -version $fmVersion -outputDirectory "$temp" 
     }
-    
-    Invoke-External "$migrate --assembly `"$($assembly.Location)`" --provider $provider --conn `"$connectionString`""
+
+    # TODO: Consider auto-escaping
+    $arguments = Format-ExternalArguments @{
+        '--assembly' = (Format-ExternalEscaped $assembly.Location)
+        '--provider' = (Format-ExternalEscaped $provider)
+        '--conn'     = (Format-ExternalEscaped $connectionString)
+        '--context'  = (Format-ExternalEscaped $context)
+    }
+    Invoke-External "$migrate $arguments"
 }
