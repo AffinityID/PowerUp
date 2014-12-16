@@ -1,7 +1,30 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\Initialize-SqlpsEnvironment.ps1"
+Import-Module "$PSScriptRoot\sqlps\sqlps.psd1"
+
+function New-SqlServerConnectionString(
+    [string]         $base,
+    [Nullable[bool]] $integratedSecurity,
+    [string]         $userID,
+    [string]         $password
+)
+{
+    $builder = New-Object Data.SqlClient.SqlConnectionStringBuilder($base)
+    if ($integratedSecurity -ne $null) {
+        $builder.PSBase.IntegratedSecurity = [bool]$integratedSecurity
+    }
+
+    if ($userID -ne $null) {
+        $builder.PSBase.UserID = $userID
+    }
+
+    if ($password -ne $null) {
+        $builder.PSBase.Password = $password
+    }
+    
+    return $builder.Tostring()
+}
 
 function Get-SqlServerDatabase {
     [CmdletBinding()]
@@ -68,6 +91,7 @@ function Invoke-DatabaseMigrations(
     [string] $provider = 'SqlServer',
     [string] $context
 ) {
+    Import-Module PowerUpFileSystem
     Import-Module PowerUpNuGet
     Import-Module PowerUpUtilities
     
@@ -82,7 +106,7 @@ function Invoke-DatabaseMigrations(
     $temp = '_temp\Invoke-DatabaseMigrations'
     $migrate = "$temp\FluentMigrator.$fmVersion\tools\Migrate.exe"
     if (!(Test-Path $migrate)) {
-        New-Item "$temp" -Type Directory
+        Ensure-Directory $temp
         Install-NuGetPackage 'FluentMigrator' -version $fmVersion -outputDirectory "$temp" 
     }
 
