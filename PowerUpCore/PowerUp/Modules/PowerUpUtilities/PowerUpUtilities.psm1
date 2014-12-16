@@ -78,6 +78,7 @@ function Invoke-External {
 
     Write-Host $command
     if ($command -is [string]) {
+        $command += " 2>&1"
         Invoke-Expression $command
     }
     elseif ($command -is [ScriptBlock]) {
