@@ -3,7 +3,6 @@ Import-Module PowerUpUtilities
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
-
 Describe 'Wait-Until' {
     Mock Write-Host 
 
@@ -30,5 +29,33 @@ Describe 'Wait-Until' {
           -Timeout (New-TimeSpan -Minutes 10)
 
         $ref.executed | Should Be $true
+    }
+}
+
+Describe 'Get-RealException' {
+    It 'should unwrap non-existent file property set exception to IOException' {
+        $real = $null
+        $file = New-Object IO.FileInfo("file with this name is unlikely to exist")
+        try {
+            $file.Attributes= 'Normal'
+        }
+        catch {
+            $real = Get-RealException($_.Exception)            
+        }
+        
+        ($real -is [IO.IOException]) | Should Be $true
+    }
+    
+    It 'should unwrap non-existent file method call exception to IOException' {
+        $real = $null
+        $file = New-Object IO.FileInfo("file with this name is unlikely to exist")
+        try {
+            $file.MoveTo("somewhere")
+        }
+        catch {
+            $real = Get-RealException($_.Exception)
+        }
+        
+        ($real -is [IO.IOException]) | Should Be $true
     }
 }

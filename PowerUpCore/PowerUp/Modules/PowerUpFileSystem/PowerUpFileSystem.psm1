@@ -192,6 +192,8 @@ function Remove-DirectoryFailSafeInternal(
 function Remove-NonRecursiveFailSafeInternal(
     [Parameter(Mandatory=$true)] [IO.FileSystemInfo] $item
 ) {
+    Import-Module PowerUpUtilities
+
     Write-Host "Deleting $($item.FullName)"
     $success = $false
     while ($item.Exists) {
@@ -200,11 +202,7 @@ function Remove-NonRecursiveFailSafeInternal(
             $item.Delete()
         }
         catch {
-            $exception = $_.Exception
-            while ($exception -is [Management.Automation.MethodInvocationException]) {
-                $exception = $exception.InnerException
-            }
-
+            $exception = Get-RealException($_.Exception)
             if ($exception -isnot [IO.IOException]) {
                 throw $exception
             }

@@ -155,9 +155,21 @@ function Wait-Until(
     }
 }
 
+function Get-RealException(
+    [Exception] $exception
+) {
+    $result = $exception
+    while ($result -is [Management.Automation.RuntimeException] -and $result.InnerException -ne $null) {
+        $result = $result.InnerException
+    }
+
+    return $result
+}
+
 Export-ModuleMember -function Merge-Defaults,
                               Use-Object,
                               Invoke-External,
                               Format-ExternalArguments,
                               Format-ExternalEscaped,
-                              Wait-Until
+                              Wait-Until,
+                              Get-RealException
