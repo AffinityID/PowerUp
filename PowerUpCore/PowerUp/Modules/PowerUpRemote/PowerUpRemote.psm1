@@ -54,28 +54,73 @@ function invoke-remotetaskwithpsexec(
     $tasks, $server, $profile, $packageName
 )
 {
-	$serverName = $server['server.name'][0]
-	write-host "===== Beginning execution of tasks $tasks on server $serverName ====="
+    $serverName = $server['server.name'][0]
+    $username = $null
+    $password = $null
+    if ($server.ContainsKey('username')) {
+        $username = $server['username'][0]
+        $password = $server['password'][0]
+    }
+    
+    $fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
+    Invoke-TaskWithPSExec `
+        -RootFolder $fullLocalReleaseWorkingFolder `
+        -Operation $operation `
+        -Profile $profile `
+        -Tasks $tasks `
+        -Server $serverName `
+        -Username $username `
+        -Password $password
+}
 
-	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
-	$batchFile = $fullLocalReleaseWorkingFolder + '\_powerup\Run.bat'
+function Invoke-TaskWithPSExec(
+    [Parameter(Mandatory = $true)][string] $operation,
+    [string] $rootFolder,
+    [string] $profile,
+    [string] $tasks,
+    [string] $server,
+    [string] $username,
+    [string] $password,
+    [switch] $doNotLoadUserProfile
+) {
+    # TODO: Move to the module level
+    Set-StrictMode -Version 2
+    $ErrorActionPreference = 'Stop'
 
-	if ($server.ContainsKey('username'))
-	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -u $server['username'][0] -p $server['password'][0] -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $profile -task $tasks
-	}
-	else
-	{
-		cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe \\$serverName /accepteula -w $fullLocalReleaseWorkingFolder $batchFile -Operation $operation -OperationProfile $profile -task $tasks
-	}
-		
-	write-host "====== Finished execution of tasks $tasks on server $serverName ====="
+    Import-Module PowerUpUtilities
+    
+    $serverForLog = [string]$(if($server) { $server } else { 'local' })
+    Write-Host "===== Beginning execution of tasks $tasks on $serverForLog ====="  -ForegroundColor White
+    $batchFile = $rootFolder + '\_powerup\Run.bat'
 
-	if ($lastexitcode -ne 0)
-	{
-		throw "Remotely executed task(s) failed with return code $lastexitcode"
-	}
-	
+    $psExecArguments = Format-ExternalArguments @{
+        '/accepteula' = [switch]$true
+        '-w' = $rootFolder
+        '-u' = $username
+        '-p' = $password
+        '-e' = $doNotLoadUserProfile
+    } -EscapeAll
+    if ($server) {
+        $psExecArguments = "\\$server $psExecArguments"
+    }
+    $psExecArguments += " $batchFile"
+    
+    # TODO: consolidate with PowerUpMeta
+    $runArguments = Format-ExternalArguments @{
+        '-Operation' = $operation
+        '-OperationProfile' = $profile
+        '-Task' = $tasks
+    } -EscapeAll
+    $psExecArguments += " $runArguments"
+    
+    # TODO: Invoke-External (currently fails with an escaping issue)
+    Invoke-External "cmd /c cscript.exe $PSScriptRoot\cmd.js $PSScriptRoot\psexec.exe $psExecArguments"
+    
+    if ($LastExitCode -ne 0) {
+        throw "Remotely executed task(s) failed with return code $LastExitCode"
+    }
+        
+    Write-Host "====== Finished execution of tasks $tasks on $serverForLog ====="  -ForegroundColor White
 }
 
 function invoke-remotetaskwithremoting(
@@ -161,4 +206,8 @@ function enable-psremotingforpowerup
 	Copy-Item $currentPath\_powerup\deploy\core\powershell.exe.config -destination C:\Windows\System32\wsmprovhost.exe.config -force
 }
 				
-export-modulemember -function invoke-remotetasks, invoke-remotetaskswithpsexec, invoke-remotetaskswithremoting, enable-psremotingforpowerup
+Export-ModuleMember -function invoke-remotetasks,
+                               Invoke-TaskWithPSExec,
+                               invoke-remotetaskswithpsexec,
+                               invoke-remotetaskswithremoting,
+                               enable-psremotingforpowerup

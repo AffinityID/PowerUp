@@ -89,33 +89,74 @@ function Invoke-DatabaseMigrations(
     [Parameter(Mandatory=$true)][string] $assemblyPath,
     [Parameter(Mandatory=$true)][string] $connectionString,
     [string] $provider = 'SqlServer',
-    [string] $context
+    [string] $context,
+    [switch] $inProcess
 ) {
     Import-Module PowerUpFileSystem
     Import-Module PowerUpNuGet
     Import-Module PowerUpUtilities
     
     $assembly = [Reflection.Assembly]::LoadFrom((Get-Item $assemblyPath).FullName)
-    
-    $fmReference = ($assembly.GetReferencedAssemblies() | ? { $_.Name -eq 'FluentMigrator' } | select -first 1)
-    if (!$fmReference) {
+    $fmVersion = GetFluentMigratorVersion($assembly)
+    if (!$fmVersion) {
         throw "Could not find FluentMigrator reference in $assemblyPath"
     }
-    $fmVersion = $fmReference.Version
     
     $temp = '_temp\Invoke-DatabaseMigrations'
-    $migrate = "$temp\FluentMigrator.$fmVersion\tools\Migrate.exe"
-    if (!(Test-Path $migrate)) {
-        Ensure-Directory $temp
-        Install-NuGetPackage 'FluentMigrator' -version $fmVersion -outputDirectory "$temp" 
+    if (!$inProcess) {
+        EnsureMigrationRunnerNuGetPackage -PackageId FluentMigrator -Version $fmVersion -RootPath $temp
+        $migrate = "$temp\FluentMigrator.$fmVersion\tools\Migrate.exe"
+    
+        # TODO: Consider auto-escaping
+        $arguments = Format-ExternalArguments @{
+            '--assembly' = $assembly.Location
+            '--provider' = $provider
+            '--conn'     = $connectionString
+            '--context'  = $context
+        } -EscapeAll
+        Invoke-External "$migrate $arguments"
+    }
+    else {
+        EnsureMigrationRunnerNuGetPackage -PackageId FluentMigrator.Runner -Version $fmVersion -RootPath $temp
+        Add-Type -Path "$temp\FluentMigrator.$fmVersion\lib\40\FluentMigrator.dll"
+        Add-Type -Path "$temp\FluentMigrator.Runner.$fmVersion\lib\40\FluentMigrator.Runner.dll"
+        
+        $announcer = New-Object FluentMigrator.Runner.Announcers.ConsoleAnnouncer
+        $runnerContext = New-Object FluentMigrator.Runner.Initialization.RunnerContext($announcer)
+        $runnerContext.Target = $assembly.Location
+        $runnerContext.Connection = $connectionString
+        $runnerContext.Database = $provider
+        $runnerContext.ApplicationContext = $context
+        $executor = New-Object FluentMigrator.Runner.Initialization.TaskExecutor($runnerContext)
+        $executor.Execute()
+    }
+}
+
+function GetFluentMigratorVersion([Parameter(Mandatory=$true)][Reflection.Assembly] $migrationAssembly) {
+    $fmReference = ($assembly.GetReferencedAssemblies() | ? { $_.Name -eq 'FluentMigrator' } | select -first 1)
+    if (!$fmReference) {
+        return $null
     }
 
-    # TODO: Consider auto-escaping
-    $arguments = Format-ExternalArguments @{
-        '--assembly' = (Format-ExternalEscaped $assembly.Location)
-        '--provider' = (Format-ExternalEscaped $provider)
-        '--conn'     = (Format-ExternalEscaped $connectionString)
-        '--context'  = (Format-ExternalEscaped $context)
-    }
-    Invoke-External "$migrate $arguments"
+    return $fmReference.Version
 }
+
+function EnsureMigrationRunnerNuGetPackage(
+    [Parameter(Mandatory=$true)][string] $rootPath,
+    [Parameter(Mandatory=$true)][string] $packageId,
+    [Parameter(Mandatory=$true)][string] $version
+) {
+    if (Test-Path "$rootPath\$packageId.$version") {
+        return
+    }
+    
+    Ensure-Directory $rootPath
+    Install-NuGetPackage $packageId -Version $version -OutputDirectory $rootPath
+}
+
+Export-ModuleMember -Function New-SqlServerConnectionString,
+                              Get-SqlServerDatabase,
+                              New-SqlServerDatabase,
+                              Add-SqlServerLogin,
+                              Add-SqlServerDatabaseUser,
+                              Invoke-DatabaseMigrations
