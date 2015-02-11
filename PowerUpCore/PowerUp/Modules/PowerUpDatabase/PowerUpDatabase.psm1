@@ -85,17 +85,10 @@ function Add-SqlServerDatabaseUser(
 # we need to use same version of migrator runner as FM version in project, so
 # there is an expectation that https://www.nuget.org/packages/fluentmigrator.tools
 # is installed and included in package
-function Invoke-DatabaseMigrations(
+function Initialize-DatabaseMigrations(
     [Parameter(Mandatory=$true)][string] $assemblyPath,
-    [Parameter(Mandatory=$true)][string] $connectionString,
-    [string] $provider = 'SqlServer',
-    [string] $context,
     [switch] $inProcess
 ) {
-    Import-Module PowerUpFileSystem
-    Import-Module PowerUpNuGet
-    Import-Module PowerUpUtilities
-    
     $assembly = [Reflection.Assembly]::LoadFrom((Get-Item $assemblyPath).FullName)
     $fmVersion = GetFluentMigratorVersion($assembly)
     if (!$fmVersion) {
@@ -103,11 +96,33 @@ function Invoke-DatabaseMigrations(
     }
     
     $temp = '_temp\Invoke-DatabaseMigrations'
-    if (!$inProcess) {
-        EnsureMigrationRunnerNuGetPackage -PackageId FluentMigrator -Version $fmVersion -RootPath $temp
-        $migrate = "$temp\FluentMigrator.$fmVersion\tools\Migrate.exe"
+    EnsureMigrationRunnerNuGetPackage -PackageId FluentMigrator -Version $fmVersion -RootPath $temp
+    if ($inProcess) {
+        EnsureMigrationRunnerNuGetPackage -PackageId FluentMigrator.Runner -Version $fmVersion -RootPath $temp
+    }
+
+    return New-Object PSObject -Property @{
+        Assembly = $assembly
+        Version = $fmVersion
+        PathRoot = $temp
+    }
+}
+
+function Invoke-DatabaseMigrations(
+    [Parameter(Mandatory=$true)][string] $assemblyPath,
+    [Parameter(Mandatory=$true)][string] $connectionString,
+    [string] $provider = 'SqlServer',
+    [string] $context,
+    [switch] $inProcess
+) {
+    Import-Module PowerUpUtilities
+
+    $init = (Initialize-DatabaseMigrations -AssemblyPath $assemblyPath -InProcess:$InProcess)
+    $assembly = $init.Assembly
     
-        # TODO: Consider auto-escaping
+    if (!$inProcess) {
+        $migrate = "$($init.PathRoot)\FluentMigrator.$($init.Version)\tools\Migrate.exe"
+    
         $arguments = Format-ExternalArguments @{
             '--assembly' = $assembly.Location
             '--provider' = $provider
@@ -117,9 +132,8 @@ function Invoke-DatabaseMigrations(
         Invoke-External "$migrate $arguments"
     }
     else {
-        EnsureMigrationRunnerNuGetPackage -PackageId FluentMigrator.Runner -Version $fmVersion -RootPath $temp
-        Add-Type -Path "$temp\FluentMigrator.$fmVersion\lib\40\FluentMigrator.dll"
-        Add-Type -Path "$temp\FluentMigrator.Runner.$fmVersion\lib\40\FluentMigrator.Runner.dll"
+        Add-Type -Path "$($init.PathRoot)\FluentMigrator.$($init.Version)\lib\40\FluentMigrator.dll"
+        Add-Type -Path "$($init.PathRoot)\FluentMigrator.Runner.$($init.Version)\lib\40\FluentMigrator.Runner.dll"
         
         $announcer = New-Object FluentMigrator.Runner.Announcers.ConsoleAnnouncer
         $runnerContext = New-Object FluentMigrator.Runner.Initialization.RunnerContext($announcer)
@@ -146,10 +160,13 @@ function EnsureMigrationRunnerNuGetPackage(
     [Parameter(Mandatory=$true)][string] $packageId,
     [Parameter(Mandatory=$true)][string] $version
 ) {
+    Import-Module PowerUpFileSystem
+    Import-Module PowerUpNuGet
+
     if (Test-Path "$rootPath\$packageId.$version") {
         return
     }
-    
+
     Ensure-Directory $rootPath
     Install-NuGetPackage $packageId -Version $version -OutputDirectory $rootPath
 }
@@ -159,4 +176,5 @@ Export-ModuleMember -Function New-SqlServerConnectionString,
                               New-SqlServerDatabase,
                               Add-SqlServerLogin,
                               Add-SqlServerDatabaseUser,
+                              Initialize-DatabaseMigrations,
                               Invoke-DatabaseMigrations
