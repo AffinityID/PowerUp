@@ -137,7 +137,7 @@ function Invoke-NuGet([string] $parameters) {
     if ($parameters) {
         $command += " " + $parameters
     }
-    Invoke-External $command
+    Invoke-External $command | Write-Host
 }
 
 export-modulemember -function Update-NuGet,
