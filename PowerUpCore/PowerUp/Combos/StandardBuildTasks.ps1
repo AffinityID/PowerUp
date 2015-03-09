@@ -28,7 +28,8 @@ properties {
         "*.resx",
         "*.user"
         "*Thumbs.db",
-        "*\obj*",
+        "*\obj",
+        "*\obj\*",
         "*\App_Data*"
     )
 }
