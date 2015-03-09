@@ -163,7 +163,13 @@ function Invoke-NuGet([string] $parameters) {
     if ($parameters) {
         $command += " " + $parameters
     }
-    Invoke-External $command
+    Invoke-External $command | Write-Host
+}
+
+function Join-NuGetSources(
+    [Parameter(Mandatory=$true)][string[]]$sources
+) {
+    return "`"$($sources -join ';')`""
 }
 
 function Join-NuGetSources(
