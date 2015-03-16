@@ -34,7 +34,7 @@ task DeployWeb {
         });
     }
     if (Test-Setting website.apppool.username) {
-        $websiteOptions.apppool = @{
+        $options.apppool = @{
             username = ${website.apppool.username}
             password = ${website.apppool.password}
         };
