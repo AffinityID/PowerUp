@@ -46,19 +46,28 @@ function Invoke-Combo-StandardWindowsService($options)
 		Set-ServiceCredentials $options.servicename $options.serviceaccountusername $options.serviceaccountpassword
 	}
 	
-	if ($options.failureoptionsrestartonfail)
+	if ($options.failureoptions.enablerecovery)
 	{
-		if (!$options.failureoptionsresetfailurecountafterdays)
+		if (!$options.failureoptions.resetfailurecountafterseconds)
 		{
-			$options.failureoptionsresetfailurecountafterdays = 1
+			$options.failureoptions.resetfailurecountafterseconds = 86400
 		}
 		
-		if (!$options.failureoptionsresetdelayminutes)
+		if (!$options.failureoptions.firstactiondelayseconds)
 		{
-			$options.failureoptionsresetdelayminutes = 1
+			$options.failureoptions.firstactiondelayseconds = 0
 		}
-	
-		Set-ServiceFailureOptions $options.servicename $options.failureoptionsresetfailurecountafterdays "restart" $options.failureoptionsresetdelayminutes
+
+		if (!$options.failureoptions.secondactiondelayseconds)
+		{
+			$options.failureoptions.secondactiondelayseconds = 0
+		}
+		
+		if (!$options.failureoptions.subsequentactiondelayseconds)
+		{
+			$options.failureoptions.subsequentactiondelayseconds = 0
+		}
+		Set-ServiceFailureOptions $options.servicename $options.failureoptions.resetfailurecountafterseconds $options.failureoptions.firstaction $options.failureoptions.firstactiondelayseconds $options.failureoptions.secondaction $options.failureoptions.secondactiondelayseconds $options.failureoptions.subsequentaction $options.failureoptions.subsequentactiondelayseconds
 	}
 
     if ($options.donotstartimmediately)

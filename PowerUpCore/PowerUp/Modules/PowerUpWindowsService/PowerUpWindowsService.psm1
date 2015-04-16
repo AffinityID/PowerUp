@@ -54,26 +54,52 @@ function Set-ServiceStartMode
 		throw "Could not find service '$Name' for which to change start mode"
 	}
 }
-
-
+Add-Type -TypeDefinition "public enum ServiceFailureAction { Restart, Reboot }"
 function Set-ServiceFailureOptions
 {
-    param
-    (
-        [string] $Name = $(throw 'Must provide a service name'),
-        [int] $ResetDays,
-        [string] $Action,
-        [int] $DelayMinutes
-    ) 
-    	
-	$ResetSeconds = $($ResetDays*60*60*24)
-	$DelayMilliseconds = $($DelayMinutes*1000*60)
-	$Action = "restart"
-	$Actions = "$Action/$DelayMilliseconds/$Action/$DelayMilliseconds/$Action/$DelayMilliseconds"
-		
-	write-host "Setting service failure options for service $Name to reset after $ResetDays days, and $Action after $DelayMinutes minutes"
+	param
+	(
+		[Parameter(Mandatory=$true)] [string] $name,
+		[int] $resetSeconds,
+		[ServiceFailureAction] $firstFailureAction,
+		[int] $firstFailureDelaySeconds,
+		[ServiceFailureAction] $secondFailureAction,
+		[int] $secondFailureDelaySeconds,
+		[ServiceFailureAction] $subsequentFailureAction,
+		[int] $subsequentFailureDelaySeconds
+	)
 	
-	& sc.exe failure $Name reset= $ResetSeconds actions= $Actions
+	Import-Module PowerUpUtilities
+	
+	$actionSegmentOne=GetActionSegment $firstFailureAction $firstFailureDelaySeconds
+	$actionSegmentTwo=GetActionSegment $secondFailureAction $secondFailureDelaySeconds
+	$actionSegmentThree=GetActionSegment $subsequentFailureAction $subsequentFailureDelaySeconds
+
+	$actions = "$actionSegmentOne/$actionSegmentTwo/$actionSegmentThree"
+	write-host "Setting service failure options for service $name to reset after $resetSeconds seconds, and the actions are $actions"
+	Invoke-External "sc.exe failure $name reset= $resetSeconds actions= $actions"
+}
+
+function GetActionSegment
+{
+	param
+	(
+		[ServiceFailureAction] $action,
+		[int] $failureDelaySeconds
+	)
+	#We do not support action: run at the moment 
+	$validActions = @('restart','reboot')
+	$actionSegment="/"
+	if (!$action){
+		return $actionSegment
+	}
+
+	if ($failureDelaySeconds -eq 0){
+		throw "Please provide the failure action delay time in seconds"
+	}
+	$failureDelayMilliseconds=$($failureDelaySeconds*1000)
+	$actionSegment="$action/$failureDelayMilliseconds"
+	return $actionSegment
 }
 
 function Get-SpecificService
