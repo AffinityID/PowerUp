@@ -35,8 +35,9 @@ properties {
 }
 
 task Clean {
-    Remove-DirectoryFailSafe $testResultsDirectory
+    Remove-DirectoryFailSafe $IntermediateRoot
     Remove-DirectoryFailSafe $PackageRoot
+    Remove-DirectoryFailSafe $testResultsDirectory
 }
 
 task RestorePackages {
