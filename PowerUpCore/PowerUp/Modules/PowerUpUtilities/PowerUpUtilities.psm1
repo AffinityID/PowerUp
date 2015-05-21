@@ -50,11 +50,22 @@ function Use-Object(
     [Parameter(Mandatory=$true)][IDisposable]$object,
     [Parameter(Mandatory=$true)][ScriptBlock]$action
 ) {
+    $failed = $false
     try {
-        &$action $object
+        return (&$action $object)
+    }
+    catch {
+        $failed = $true
+        throw
     }
     finally {
-        $object.Dispose();
+        if (!$failed) {
+            $object.Dispose();
+        }
+        else {
+            # avoiding overwrite of the original exception
+            try { $object.Dispose(); } catch {}
+        }
     }
 }
 
@@ -94,8 +105,7 @@ function Invoke-External {
 }
 
 function Format-ExternalArguments(
-    [Parameter(Mandatory=$true)] [hashtable] $arguments,
-    [switch] $escapeAll = $false
+    [Parameter(Mandatory=$true)] [hashtable] $arguments
 ) {
     $parts = $arguments.GetEnumerator() | 
         ? {
@@ -106,13 +116,8 @@ function Format-ExternalArguments(
         } |
         % { 
             $argument = $_.Key
-            $value = $_.Value
-            if ($value -isnot [switch]) {
-                if ($escapeAll) {
-                    $value = Format-ExternalEscaped $value
-                }
-                
-                $argument += " " + $value
+            if ($_.Value -isnot [switch]) {
+                $argument += " " + $_.Value
             }
             
             return $argument
@@ -121,7 +126,9 @@ function Format-ExternalArguments(
     return $parts -join ' '
 }
 
-function Format-ExternalEscaped([string] $argument) {
+function Format-ExternalEscaped(
+    [Parameter(Mandatory=$true)] [string] $argument
+) {
     if ($argument -eq $null -or $argument -eq '') {
         return $argument
     }

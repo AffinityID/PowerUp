@@ -414,40 +414,6 @@ function End-WebChangeTransaction()
 	return End-WebCommitDelay
 }
 
-function Try-WebRequest([string]$url)
-{
-  function FullStatusCode($response) {
-    return "$([int]$response.StatusCode) $($response.StatusDescription)";
-  }
-
-  write-host "Requesting '$($url)'" -nonewline
-  $request = [system.Net.WebRequest]::Create($url)
-  $request.Timeout = 10 * 60 * 1000 # 10 minutes
-  try {
-    $response = $request.GetResponse()
-  }
-  catch [System.Net.WebException] {
-    $response = $_.Exception.Response
-    if ($response -eq $null) {
-      throw;
-    }
-    
-    $stream = $response.GetResponseStream()
-    $reader = new-object System.IO.StreamReader($stream)
-    $error = $reader.ReadToEnd();
-    
-    write-host ": $(FullStatusCode($response))"
-    throw "Request to $url failed ($(FullStatusCode($response))): $error"
-  }
-  finally {
-    if ($response -ne $null) {
-      $response.Close();
-    }
-  }
-   
-  write-host ": $(FullStatusCode($response))" -foregroundcolor green
-}
-
 export-modulemember -function set-webapppool32bitcompatibility,
                                set-apppoolidentitytouser,
                                set-apppoolidentityType,
@@ -473,5 +439,4 @@ export-modulemember -function set-webapppool32bitcompatibility,
                                set-property,
                                set-webproperty,
                                Begin-WebChangeTransaction,
-                               End-WebChangeTransaction,
-                               Try-WebRequest
+                               End-WebChangeTransaction

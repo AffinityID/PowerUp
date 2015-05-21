@@ -9,11 +9,9 @@ function Invoke-Combo-StandardWebsite($options) {
 
 function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $options)
 {
-    import-module powerupfilesystem
-    import-module powerupweb
-    # import-module powerupappfabric\ApplicationServer
-    # import-module poweruputils
-    # Import-Module Pscx
+    Import-Module PowerUpFileSystem
+    Import-Module PowerUpWeb
+    Import-Module PowerUpWebRequest
     
     Set-StrictMode -Version 2
         
@@ -193,12 +191,12 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     if($options.tryrequestwebsite)
     {
         $rootUrl = "$($firstBinding.protocol)://$($firstBinding.url):$($firstBinding.port)";
-        try-webrequest $rootUrl
+        Send-HttpRequest GET $rootUrl
     
         if($options.virtualdirectories)
         {
             foreach ($directory in $options.virtualdirectories) {
-                try-webrequest "$rootUrl/$($virtualdirectory.directoryname)"
+                Send-HttpRequest GET "$rootUrl/$($virtualdirectory.directoryname)"
             }
         }
     }
