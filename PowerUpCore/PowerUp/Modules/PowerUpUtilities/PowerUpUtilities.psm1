@@ -105,7 +105,8 @@ function Invoke-External {
 }
 
 function Format-ExternalArguments(
-    [Parameter(Mandatory=$true)] [hashtable] $arguments
+    [Parameter(Mandatory=$true)] [hashtable] $arguments,
+    [switch] $escapeAll = $false
 ) {
     $parts = $arguments.GetEnumerator() | 
         ? {
@@ -116,8 +117,13 @@ function Format-ExternalArguments(
         } |
         % { 
             $argument = $_.Key
-            if ($_.Value -isnot [switch]) {
-                $argument += " " + $_.Value
+            $value = $_.Value
+            if ($value -isnot [switch]) {
+                if ($escapeAll) {
+                    $value = Format-ExternalEscaped $value
+                }
+                
+                $argument += " " + $value
             }
             
             return $argument
@@ -127,7 +133,7 @@ function Format-ExternalArguments(
 }
 
 function Format-ExternalEscaped(
-    [Parameter(Mandatory=$true)] [string] $argument
+    [string] $argument
 ) {
     if ($argument -eq $null -or $argument -eq '') {
         return $argument
