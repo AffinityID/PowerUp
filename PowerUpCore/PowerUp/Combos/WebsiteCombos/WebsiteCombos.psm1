@@ -62,9 +62,10 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
         Merge-Defaults $_ @{
             protocol = "http";
             ip = "*";
-            port = 80;
+            port = { if ($_.protocol -eq 'https') { 443 } else { 80 } };
             useselfsignedcert = $true;
-            certname = { $options.websitename }
+            certname = { $options.websitename };
+            '[ordered]' = @('protocol','port')
         }
     }
     
@@ -190,13 +191,18 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
 
     if($options.tryrequestwebsite)
     {
-        $rootUrl = "$($firstBinding.protocol)://$($firstBinding.url):$($firstBinding.port)";
-        Send-HttpRequest GET $rootUrl
-    
-        if($options.virtualdirectories)
+        foreach ($binding in $options.bindings)
         {
-            foreach ($directory in $options.virtualdirectories) {
-                Send-HttpRequest GET "$rootUrl/$($virtualdirectory.directoryname)"
+            $bindingRootUrl = "$($binding.protocol)://$($binding.url):$($binding.port)"
+            $ignoreSslErrors = $binding.useselfsignedcert
+            Send-HttpRequest GET $bindingRootUrl -IgnoreSslErrors:$ignoreSslErrors
+        
+            if($options.virtualdirectories)
+            {
+                foreach ($directory in $options.virtualdirectories)
+                {
+                    Send-HttpRequest GET "$rootUrl/$($virtualdirectory.directoryname)" -IgnoreSslErrors:$ignoreSslErrors
+                }
             }
         }
     }
