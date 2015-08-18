@@ -51,7 +51,7 @@ task Build {
 task Test {
     Merge-Defaults $TestOptions @{
         default = @{
-            rootpath = '.tests'
+            rootpath = 'Tests'
         }
         nunit = @{
             filefilter = '*Tests*.dll'
