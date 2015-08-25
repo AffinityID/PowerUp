@@ -95,7 +95,7 @@ function Invoke-External {
 
 function Format-ExternalArguments(
     [Parameter(Mandatory=$true)] [hashtable] $arguments,
-    [string] $seperator = " ",
+    [string] $separator = " ",
     [switch] $escapeAll = $false
 ) {
     $parts = $arguments.GetEnumerator() | 
@@ -113,7 +113,7 @@ function Format-ExternalArguments(
                     $value = Format-ExternalEscaped $value
                 }
                 
-                $argument += $seperator + $value
+                $argument += $separator + $value
             }
             
             return $argument

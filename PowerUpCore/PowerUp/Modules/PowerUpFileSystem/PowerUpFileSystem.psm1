@@ -20,7 +20,7 @@ function Copy-Directory([string]$sourceDirectory, [string]$destinationDirectory)
     Write-Warning "Copy-Directory is obsolete, use Invoke-Robocopy instead for better control."
     
     Write-Host "copying newer files from $sourceDirectory to $destinationDirectory"
-    Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc "
+    Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc"
 
     Write-Host "Successfully copied to $destinationDirectory "
     cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
@@ -29,7 +29,7 @@ function Copy-Directory([string]$sourceDirectory, [string]$destinationDirectory)
 function Copy-MirroredDirectory([string]$sourceDirectory, [string]$destinationDirectory)
 {
 	Write-Host "Mirroring $sourceDirectory to $destinationDirectory"
-	Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc /mir "
+	Invoke-Robocopy $sourceDirectory $destinationDirectory "/E /np /njh /nfl /ns /nc /mir"
 	
 	Write-Host "Successfully mirrored to $destinationDirectory "
 	cmd /c #reset the lasterrorcode strangely set by robocopy to be non-0
@@ -61,7 +61,10 @@ function Invoke-Robocopy(
 ) {
     Import-Module PowerUpUtilities
 
-    $options += (Format-ExternalArguments (@{
+    if ($options.length > 0)
+        $options += ' '
+
+    $options += (Format-ExternalArguments @{
         '/e'     = $copyDirectoriesIncludingEmpty
         '/s'     = $copyDirectories
         '/purge' = $purge
@@ -81,7 +84,13 @@ function Invoke-Robocopy(
         '/ndl'   = $noDirectoryList
         '/njh'   = $noJobHeader
         '/njs'   = $noJobSummary
-        '/R'     = 10   # Set default number of retries
+    })
+
+    if ($options.length > 0)
+        $options += ' '
+        
+    $options += (Format-ExternalArguments (@{
+        '/R'     = 10    # Set default number of retries
     }) ":")
 
     $filesString = ($files | % { "`"$_`"" }) -Join ' '
