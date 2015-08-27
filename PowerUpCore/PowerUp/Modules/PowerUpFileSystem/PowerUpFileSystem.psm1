@@ -120,7 +120,9 @@ function Grant-PathFullControl(
 {
     Write-Host "Granting full control of $path to $user."
     $acl = Get-Acl $path
-    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+    $inheritance = $(if (Test-Path $path -PathType Container) { 'ContainerInherit, ObjectInherit' } else { 'None' })
+
+    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, "FullControl", $inheritance, "None", "Allow")
     $acl.SetAccessRule($rule)
     Set-Acl $path $acl
 }
