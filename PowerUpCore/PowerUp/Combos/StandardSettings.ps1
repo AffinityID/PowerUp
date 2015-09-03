@@ -1,57 +1,23 @@
-$profileSettings = @{};
-$scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
+({
+    function Import-PowerUpProfileSettings() {
+        Import-Module PowerUpSettings
 
-function getPlainTextServerSettings($serverName)
-{
-	getPlainTextSettings $serverName servers.txt
-}
-
-function getPlainTextDeploymentProfileSettings($deploymentProfile)
-{
-	getPlainTextSettings $deploymentProfile settings.txt
-}
-
-function getPlainTextSettings($parameter, $fileName)
-{
-	$currentPath = Get-Location
-	$fullFilePath = "$currentPath\$fileName"
-
-	Import-Module $scriptPath\..\Modules\PowerUpSettings\Id.PowershellExtensions.dll
-	
-	if (!(test-path $fullFilePath))
-	{
-		return @()
-	}
-	Write-Host "Processing settings file at $fullFilePath with the following parameter: $parameter"
-	get-parsedsettings $fullFilePath $parameter
-}
-
-function Import-PowerUpProfileSettings() {
-    Import-Module PowerUpSettings
-
-    $profileSettings = &$deploymentProfileSettingsScriptBlock ${powerup.profile}
-    if (!$profileSettings)
-    {
-        $profileSettings = @{}
-    }
-    
-    $packageInformation = getPlainTextSettings "PackageInformation" "package.id"
-    if ($packageInformation)
-    {
-        foreach ($item in $packageInformation.GetEnumerator())
-        {
-            $profileSettings.Add($item.Key, $item.Value)
+        $profileSettings = Read-Settings settings.txt ${powerup.profile}  -Raw
+        if (Test-Path "package.id") {
+            # TODO: Do we still use/need this?
+            $packageInformation = Read-Settings "package.id" "PackageInformation" -Raw
+            if ($packageInformation) {
+                foreach ($item in $packageInformation.GetEnumerator()) {
+                    $profileSettings.Add($item.Key, $item.Value)
+                }
+            }
         }
+
+        Import-Settings $profileSettings
     }
-    
-    Write-Host "Package settings for this profile are:"
-    $profileSettings | Format-Table -property * | Out-String
-    import-settings $profileSettings
-}
 
-tasksetup {
     Import-PowerUpProfileSettings
-}
+}).Invoke()
 
-$deploymentProfileSettingsScriptBlock = $function:getPlainTextDeploymentProfileSettings
-$serverSettingsScriptBlock = $function:getPlainTextServerSettings
+# This is obsolete and will be removed in the future:
+$serverSettingsScriptBlock = {}

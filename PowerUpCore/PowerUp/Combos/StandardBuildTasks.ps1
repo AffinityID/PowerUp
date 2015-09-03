@@ -1,3 +1,8 @@
+if (${powerup.profile} -eq $null -or ${powerup.profile} -eq '') {
+    ${powerup.profile} = 'Default'
+}
+. .\_powerup\Combos\StandardSettings.ps1
+
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 

@@ -1,7 +1,7 @@
 
 function invoke-remotetasks(
     [Parameter(Mandatory = $true)][string] $operation,
-    $tasks, $serverNames, $profile, $packageName, $settingsFunction, $remoteexecutiontool=$null
+    $tasks, $serverNames, $profile, $packageName, $remoteexecutiontool=$null
 )
 {
 	$currentLocation = get-location
@@ -176,12 +176,11 @@ function copy-package($servers, $packageName)
 
 function get-serverSettings($settingsFunction, $serverNames)
 {	
-		
+	Import-Module PowerUpSettings
 	$servers = @()
 	
-	foreach($serverName in $serverNames)
-	{
-		$serverSettings = &$settingsFunction $serverName		
+	foreach($serverName in $serverNames) {
+		$serverSettings = Read-Settings "servers.txt" $serverName
 		$servers += $serverSettings
 	}
 	
