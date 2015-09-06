@@ -1,36 +1,6 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-Add-Type @"
-using System;
-using System.Collections.ObjectModel;
-using System.Management.Automation;
-
-public class PowerUpDynamicSetting : PSVariable {
-    private readonly ScriptBlock _getter;
-    
-    public PowerUpDynamicSetting(string name, ScriptBlock getter)
-        : base(name, null, ScopedItemOptions.AllScope | ScopedItemOptions.ReadOnly)
-    {
-        _getter = getter;
-    }
-
-    public override object Value {
-        get {
-            var results = _getter.Invoke();
-            if (results.Count == 1) {
-                return results[0];
-            }
-            else {
-                var returnResults = new PSObject[results.Count];
-                results.CopyTo(returnResults, 0);
-                return returnResults;
-            }
-        }
-    }
-}
-"@
-
 function Resolve-SettingsInternal(
     [Parameter(Mandatory=$true)] [Hashtable] $settings,
     [ScriptBlock] $onUnresolved
@@ -129,6 +99,8 @@ function Read-Settings(
 function Import-Settings(
     [Parameter(Mandatory=$true)] [Hashtable] $settings
 ) {
+    Import-Module PowerUpUtilities
+
     $from = $(if($settings['_source']) {
         $sourceSection = $settings._source.section
         $sourceFileName = [IO.Path]::GetFileName($settings._source.path)
@@ -139,18 +111,21 @@ function Import-Settings(
 
     $maxNameLength = [int]($settings.Keys | %{$_.Length} | sort -Descending | select -First 1)
     $unresolved = @{}
-    $resolved = Resolve-SettingsInternal $settings -OnUnresolved {
+    $processed = Resolve-SettingsInternal $settings -OnUnresolved {
         param ($name, $value, $message)
-        # This would only be thrown if anything attempts to use it
-        $variable = New-Object PowerUpDynamicSetting "global:$name", { throw $message }.GetNewClosure()
-        $ExecutionContext.SessionState.PSVariable.Set($variable)
-        $unresolved[$name] = $true
+        $unresolved[$name] = $message
         return $value
     }
-    $resolved.GetEnumerator() | % {
-        Write-Host "  $($_.Key.PadRight($maxNameLength)) $($_.Value)"
-        if (!$unresolved.ContainsKey($_.Key)) {
-            Set-Variable -Name $_.Key -Value $_.Value -Scope Global -Option ReadOnly
+    $processed.GetEnumerator() | % {
+        $name = $_.Key
+        Write-Host "  $($name.PadRight($maxNameLength)) $($_.Value)"
+        $unresolvedMessage = $unresolved[$name]
+        if (!$unresolvedMessage) {
+            Set-Variable -Name $name -Scope Global -Option Constant -Value $_.Value
+        }
+        else {
+            # This would only be thrown if anything attempts to use it
+            Set-DynamicVariable -Name $name -Scope Global -Option Constant -Get { throw $unresolvedMessage }.GetNewClosure()
         }
     }
 }

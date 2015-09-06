@@ -1,6 +1,58 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
+Add-Type @"
+using System;
+using System.Collections.ObjectModel;
+using System.Management.Automation;
+
+public class PowerUpDynamicVariable : PSVariable {
+    private readonly ScriptBlock _getter;
+    private readonly ScriptBlock _setter;
+    
+    public PowerUpDynamicVariable(string name, ScriptBlock getter, ScriptBlock setter, ScopedItemOptions options)
+        : base(name, null, options)
+    {
+        _getter = getter;
+        _setter = setter;
+    }
+
+    public override object Value {
+        get {
+            if (_getter == null)
+                throw new NotSupportedException("Dynamic variable " + Name + " has no get block and so can't be read.");
+        
+            var results = _getter.Invoke();
+            if (results.Count == 1) {
+                return results[0];
+            }
+            else {
+                var returnResults = new PSObject[results.Count];
+                results.CopyTo(returnResults, 0);
+                return returnResults;
+            }
+        }
+        set {
+            if (_setter == null)
+                throw new NotSupportedException("Dynamic variable " + Name + " has no set block and so can't be set.");
+        
+            _setter.Invoke(value);
+        }
+    }
+}
+"@
+
+function Set-DynamicVariable(
+    [Parameter(Mandatory=$true)] [string] $name,
+    [ScriptBlock] $get = $null,
+    [ScriptBlock] $set = $null,
+    [Management.Automation.ScopedItemOptions] $options = [Management.Automation.ScopedItemOptions]::None,
+    [string] $scope = 'Local'
+) {
+    $variable = New-Object PowerUpDynamicVariable("$($scope):$name",$get,$set,$options)
+    $ExecutionContext.SessionState.PSVariable.Set($variable)
+}
+
 function Merge-Defaults($target, $defaults) {
     $orderedDefaults = $defaults.GetEnumerator()
     if ($defaults.ContainsKey("[ordered]")) {
@@ -183,10 +235,11 @@ function Get-RealException(
     return $result
 }
 
-Export-ModuleMember -function Merge-Defaults,
-                              Use-Object,
-                              Invoke-External,
-                              Format-ExternalArguments,
-                              Format-ExternalEscaped,
-                              Wait-Until,
-                              Get-RealException
+Export-ModuleMember -function Set-DynamicVariable,
+                               Merge-Defaults,
+                               Use-Object,
+                               Invoke-External,
+                               Format-ExternalArguments,
+                               Format-ExternalEscaped,
+                               Wait-Until,
+                               Get-RealException
