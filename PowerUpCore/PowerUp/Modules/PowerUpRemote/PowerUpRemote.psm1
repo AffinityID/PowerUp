@@ -15,7 +15,7 @@ function invoke-remotetasks(
 		{
 			if ($server.ContainsKey('remote.task.execution.remoteexecutiontool'))
 			{
-				$remoteexecutiontool = $server['remote.task.execution.remoteexecutiontool'][0]
+				$remoteexecutiontool = $server['remote.task.execution.remoteexecutiontool']
 				$remoteexecutiontool = 'psexec'
 			}
 		}
@@ -54,15 +54,15 @@ function invoke-remotetaskwithpsexec(
     $tasks, $server, $profile, $packageName
 )
 {
-    $serverName = $server['server.name'][0]
+    $serverName = $server['server.name']
     $username = $null
     $password = $null
     if ($server.ContainsKey('username')) {
-        $username = $server['username'][0]
-        $password = $server['password'][0]
+        $username = $server['username']
+        $password = $server['password']
     }
     
-    $fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
+    $fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'] + '\' + $packageName
     Invoke-TaskWithPSExec `
         -RootFolder $fullLocalReleaseWorkingFolder `
         -Operation $operation `
@@ -128,10 +128,10 @@ function invoke-remotetaskwithremoting(
     $tasks, $server, $profile, $packageName
 )
 {	
-	$serverName = $server['server.name'][0]
+	$serverName = $server['server.name']
 	write-host "===== Beginning execution of tasks $tasks on server $serverName ====="
 
-	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'][0] + '\' + $packageName
+	$fullLocalReleaseWorkingFolder = $server['local.temp.working.folder'] + '\' + $packageName
 
 	Invoke-Command -scriptblock { param($workingFolder, $op, $prof, $tasks) set-location $workingFolder; .\_powerup\RunPSake.ps1 -Operation $op -OperationProfile $prof -Task $tasks } -computername $serverName -ArgumentList $fullLocalReleaseWorkingFolder, $operation, $profile, $tasks 
 	
@@ -144,8 +144,8 @@ function copy-package($servers, $packageName)
 
 	foreach ($server in $servers)
 	{	
-		$remoteDir = $server['remote.temp.working.folder'][0]
-		$serverName = $server['server.name'][0]
+		$remoteDir = $server['remote.temp.working.folder']
+		$serverName = $server['server.name']
 		
 		if(!$remoteDir)
 		{
