@@ -61,6 +61,9 @@ function Invoke-Robocopy(
 ) {
     Import-Module PowerUpUtilities
 
+    if ($options.length > 0)
+        $options += ' '
+
     $options += (Format-ExternalArguments @{
         '/e'     = $copyDirectoriesIncludingEmpty
         '/s'     = $copyDirectories
@@ -82,6 +85,13 @@ function Invoke-Robocopy(
         '/njh'   = $noJobHeader
         '/njs'   = $noJobSummary
     })
+
+    if ($options.length > 0)
+        $options += ' '
+        
+    $options += (Format-ExternalArguments (@{
+        '/R'     = 10    # Set default number of retries
+    }) ":")
 
     $filesString = ($files | % { "`"$_`"" }) -Join ' '
     $command = "$PSScriptRoot\robocopy.exe `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"
