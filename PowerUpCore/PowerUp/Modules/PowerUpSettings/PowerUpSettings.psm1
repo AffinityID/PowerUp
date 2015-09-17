@@ -11,17 +11,18 @@ function Resolve-SettingsInternal(
             return $resolved[$name]
         }
     
-        $missing = @()
+        $closure = @{ missing = @() }
         $result = [regex]::Replace($settings[$name], '\${([^}]+)}', {
             param ($match)
             $refName = $match.Groups[1].Value
             if (!$settings.ContainsKey($refName)) {
-                $missing += $refName
+                $closure.missing += $refName
                 return $match.Value
             }
             return Resolve $refName
         })
-        
+        $missing = $closure.missing
+
         $resolvedValue = $result
         if ($missing.Length -gt 0) {
             $message = "Setting '$name' references unknown setting(s): '$($missing -join "', '")'"
