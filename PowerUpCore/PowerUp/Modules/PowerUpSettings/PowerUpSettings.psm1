@@ -70,20 +70,22 @@ function Read-Settings(
                 throw "Failed to parse '$path': expected first section name, got '$_' instead."
             }
 
-            $lastSection[$matches.name] = $matches.value.Trim()
+            $lastSection[$matches.name] = $(if ($matches['value']) { $matches.value.Trim() } else { '' })
         }
     }
 
-    $default = $sections['Default']
     $current = $sections[$section]
     if (!$current) {
         throw "Section '$section' was not found in '$path'. Found section(s): $($sections.Keys -join ',')."
     }
     
-    if ($default) {
-        $default.GetEnumerator() | % {
-            if (!$current[$_.Key]) {
-                $current[$_.Key] = $_.Value
+    if ($section -ne 'Default') {
+        $default = $sections['Default']
+        if ($default) {
+            $default.GetEnumerator() | % {
+                if (!$current.ContainsKey($_.Key)) {
+                    $current[$_.Key] = $_.Value
+                }
             }
         }
     }
