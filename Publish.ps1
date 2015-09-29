@@ -3,7 +3,7 @@ param(
     [string] $buildNumber = 0,
     [string] $outputPath = ".\_output"
 )
-$version = "0.9.$buildNumber"
+$version = "0.$buildNumber"
 
 if (Test-Path $outputPath) {
     Remove-Item -Recurse $outputPath
