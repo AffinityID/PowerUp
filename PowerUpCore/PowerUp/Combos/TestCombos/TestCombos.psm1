@@ -3,30 +3,29 @@ $ErrorActionPreference = "Stop"
 
 function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
     Import-Module PowerUpUtilities
+    Import-Module PowerUpFileSystem
     Import-Module PowerUpTestRunner
     Write-Host "Test options: $($options | Out-String)"
 
     $testErrors = @()
-    $defaults = $options['default']
-    if ($defaults -eq $null) {
-        $defaults = @{}
+    if ($options['default']) {
+        Write-Error "Option 'default' is obsolete and no longer supported. Set test options per runner instead."
     }
     
     $nunit = $options['nunit']
     if ($nunit -ne $null) {
-        Merge-Defaults $nunit $defaults
-        Merge-Defaults $nunit @{
-            filefilter = '*.dll'
-            pathfilter = ''
+        Merge-Defaults $nunit @{ paths = @() }
+
+        @('rootpath', 'pathfilter', 'filefilter') | % {
+            if ($nunit[$_]) { Write-Error "Option '$_' is obsolete and no longer supported. Use 'paths' instead." }
         }
-        Get-ChildItem -Recurse -Path $nunit.rootpath -Include $nunit.filefilter |
-            ? { $_.FullName -match [regex]::Escape($nunit.pathfilter) } | # not great, but Split-Path would be much harder
-            % { 
-                Invoke-NUnitTests $_ -ErrorAction Continue -ErrorVariable testError
-                if ($testError) {
-                    $testErrors += $testError
-                }
+
+        Get-MatchedPaths -Includes $nunit.paths | % {
+            Invoke-NUnitTests (Get-Item $_.FullPath) -ErrorAction Continue -ErrorVariable testError
+            if ($testError) {
+                $testErrors += $testError
             }
+        }
     }
     else {
         Write-Host "Skipping NUnit tests (not enabled in options)."
@@ -34,7 +33,6 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
 
     $pester = $options['pester']
     if ($pester -ne $null) {
-        Merge-Defaults $pester $defaults
         Invoke-PesterTests $pester.rootpath -ErrorAction Continue -ErrorVariable testError
         if ($testError) {
             $testErrors += $testError

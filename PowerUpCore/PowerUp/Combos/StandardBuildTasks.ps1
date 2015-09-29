@@ -28,14 +28,13 @@ properties {
 
     $PackageStucture = @()
     $StandardWebExcludes = @(
-        "*.cs",
+        "**\*.cs",
+        "**\*.resx",
+        "**\Thumbs.db",
         "*.csproj",
-        "*.resx",
-        "*.user"
-        "*Thumbs.db",
-        "*\obj",
-        "*\obj\*",
-        "*\App_Data*"
+        "*.user",
+        "**\obj\**",
+        "**\App_Data\**"
     )
 }
 
@@ -57,12 +56,8 @@ task Build {
 
 task Test {
     Merge-Defaults $TestOptions @{
-        default = @{
-            rootpath = '.tests'
-        }
         nunit = @{
-            filefilter = '*Tests*.dll'
-            pathfilter = "bin\$Configuration"
+            paths = @( "**\bin\$Configuration\*Tests*.dll" )
         }
     }
     Invoke-ComboTests $TestOptions
