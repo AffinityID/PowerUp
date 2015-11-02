@@ -7,6 +7,9 @@ $ModuleName = "WebAdministration"
 $ModuleLoaded = $false
 $LoadAsSnapin = $false
 
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
 if ($PSVersionTable.PSVersion.Major -ge 2)
 {
     if ((Get-Module -ListAvailable | ForEach-Object {$_.Name}) -contains $ModuleName)
@@ -219,6 +222,16 @@ function set-WebAppPool($appPoolName, $pipelineMode, $runtimeVersion)
 	SetAppPoolProperties $appPoolName $pipelineMode $runtimeVersion
 }
 
+function Register-WebAppPool(
+    [Parameter(Mandatory=$true)] [string] $appPoolName,
+    [Parameter(Mandatory=$true)] [string] $runtimeVersion
+)
+{
+    Write-Host "Ensuring app pool $appPoolName with .NET version '$runtimeVersion'."
+    CreateAppPool $appPoolName
+    SetAppPoolProperties $appPoolName Integrated $runtimeVersion
+}
+
 function Uninstall-WebSite($websiteName)
 {
 	write-host "Removing website $websiteName"
@@ -328,10 +341,20 @@ function new-virtualdirectory($websiteName, $subPath, $physicalPath)
 	New-Item $sitesPath\$websiteName\$subPath -physicalPath $physicalPath -type VirtualDirectory 
 }
 
-function new-webapplication($websiteName, $appPoolName, $subPath, $physicalPath)
+function New-WebApplication(
+    [Parameter(Mandatory=$true)] [string] $websiteName,
+    [Parameter(Mandatory=$true)] [string] $appPoolName,
+    [Parameter(Mandatory=$true)] [string] $subPath,
+    [Parameter(Mandatory=$true)] [string] $physicalPath,
+    [switch] $force
+)
 {
-	write-host "Adding application $subPath to web site $websiteName pointing to $physicalPath running under app pool  $appPoolName"
-	New-Item $sitesPath\$websiteName\$subPath -physicalPath $physicalPath -applicationPool $appPoolName -type Application 
+    Write-Host "Adding application $subPath to web site $websiteName pointing to $physicalPath running under app pool $appPoolName."
+    New-Item $sitesPath\$websiteName\$subPath `
+        -PhysicalPath $physicalPath `
+        -ApplicationPool $appPoolName `
+        -Type Application `
+        -Force:$force
 }
 
 function Stop-AppPool($name) {
