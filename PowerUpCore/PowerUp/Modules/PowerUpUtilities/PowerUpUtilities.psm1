@@ -197,8 +197,8 @@ function Format-ExternalEscaped(
     if ($argument -eq $null -or $argument -eq '') {
         return $argument
     }
-    
-    if ($argument.Contains('"')) {
+   
+    if ($argument -match '[`"]') {
         return "'$($argument.Replace('"', '\"').Replace("'", "''"))'"
         # " # this comment is just a highlighting fix for notepad 2
     }

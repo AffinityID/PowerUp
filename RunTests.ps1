@@ -1,10 +1,11 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-$scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Get-ChildItem $scriptPath | % {
     $modulePath = Join-Path $_ 'PowerUp\Modules'
     if (Test-Path $modulePath) {
+        $modulePath = Resolve-Path $modulePath    
         $env:PSModulePath += ";$modulePath"
         Write-Host "PSModulePath: added $modulePath."
     }
@@ -20,7 +21,7 @@ Reset-Directory $testsPath
 Get-ChildItem $scriptPath | % {
     $testPath = Join-Path $_ 'Tests'
     if (Test-Path $testPath) {
-        Copy-Item "$testPath\*" -Destination $testsPath
+        Copy-Item "$testPath\*" -Destination $testsPath -Recurse
     }
 }
 
