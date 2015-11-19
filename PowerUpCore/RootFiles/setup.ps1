@@ -9,29 +9,6 @@ task Build {
     Invoke-PowerUp build -Task Build
 }
 
-task Database {
-    Import-Module PowerUpDatabase
-
-    $dbname = ${database.name}
-    $dbserver = ${database.server}
-    $database = (Get-SqlServerDatabase $dbname -server $dbserver -erroraction SilentlyContinue)
-    if ($database -eq $null) {
-        $database = (New-SqlServerDatabase $dbname -server $dbserver)
-    }
-    else {
-        Write-Host "Database $database already exists on $dbserver."
-    }
-
-    $login = "IIS APPPOOL\${website.name}"
-    Add-SqlServerLogin $login -server $dbserver | Out-Null
-    $user = Add-SqlServerDatabaseUser $login -database $dbname -server $dbserver
-    
-    $database.Roles["db_owner"].AddMember($user.Name)
-    Invoke-DatabaseMigrations `
-        -assemblyPath "Migrations\bin\Release\Migrations.dll" `
-        -connectionString "${database.connectionString}"
-}
-
 task Website {
     Import-Module WebsiteCombos
 
@@ -64,4 +41,4 @@ task Hosts {
     Write-Host "* Registered ${domain.name} in hosts." -ForegroundColor Green
 }
 
-task Default -depends Build, Database, Hosts, Website
+task Default -depends Build, Hosts, Website
