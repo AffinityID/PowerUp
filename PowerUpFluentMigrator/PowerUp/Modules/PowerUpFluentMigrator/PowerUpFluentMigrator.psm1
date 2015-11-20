@@ -26,7 +26,14 @@ function Invoke-FluentMigrator(
         
         $announcer = New-Object FluentMigrator.Runner.Announcers.ConsoleAnnouncer
         $runnerContext = New-Object FluentMigrator.Runner.Initialization.RunnerContext($announcer)
-        $runnerContext.Target = $assembly.Location
+        if ($runnerContext.GetType().GetProperty('Targets')) {
+            # Latest version
+            $runnerContext.Targets = @($assembly.Location)
+        }
+        else {
+            # Older versions
+            $runnerContext.Target = $assembly.Location
+        }
         $runnerContext.Connection = $connectionString
         $runnerContext.Database = $provider
         $runnerContext.ApplicationContext = $context
