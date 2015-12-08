@@ -4,7 +4,6 @@ $ErrorActionPreference = "Stop"
 function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
     Import-Module PowerUpUtilities
     Import-Module PowerUpFileSystem
-    Import-Module PowerUpTestRunner
     Write-Host "Test options: $($options | Out-String)"
 
     $testErrors = @()
@@ -14,6 +13,7 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
     
     $nunit = $options['nunit']
     if ($nunit -ne $null) {
+        Import-Module PowerUpNUnit # not separated yet, but ready to be
         Merge-Defaults $nunit @{ paths = @() }
 
         @('rootpath', 'pathfilter', 'filefilter') | % {
@@ -27,21 +27,20 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
             }
         }
     }
-    else {
-        Write-Host "Skipping NUnit tests (not enabled in options)."
-    }
 
     $pester = $options['pester']
     if ($pester -ne $null) {
+        if (!(Get-Module -ListAvailable -Name PowerUpPester)) {
+            Write-Error "PowerUpPester module is not found: make sure PowerUp.Pester package is installed."
+        }
+    
+        Import-Module PowerUpPester
         Invoke-PesterTests $pester.rootpath -ErrorAction Continue -ErrorVariable testError
         if ($testError) {
             $testErrors += $testError
         }
     }
-    else {
-        Write-Host "Skipping Pester tests (not enabled in options)."
-    }
-    
+
     if ($testErrors.Length -gt 0) {
         Write-Error "One or more tests failed: $($testErrors | Out-String)" -ErrorAction Stop
     }

@@ -13,7 +13,7 @@ $env:PSModulePath += ";.\PowerUpCore\PowerUp\Modules\"
 Import-Module PowerUpFileSystem
 Import-Module PowerUpNuGet
 
-@('PowerUpCore', 'PowerUpFluentMigrator', 'PowerUpSvn', 'PowerUpJsonFallback') | % {
+@('PowerUpCore', 'PowerUpFluentMigrator', 'PowerUpPester', 'PowerUpSvn', 'PowerUpJsonFallback') | % {
     Invoke-Robocopy .\$_ .\_output\$_ -Mirror -NoFileList -NoDirectoryList -NoJobHeader -NoJobSummary
     New-NuGetPackage ".\_output\$_\Package.nuspec" ".\_output" -Version $version -NoPackageAnalysis -NoDefaultExcludes
 }

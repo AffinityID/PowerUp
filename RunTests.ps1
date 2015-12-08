@@ -14,7 +14,7 @@ Get-ChildItem $scriptPath | % {
 $resultsPath = Join-Path $scriptPath "_testresults"
 
 Import-Module PowerUpFileSystem
-Import-Module PowerUpTestRunner
+Import-Module PowerUpPester
 
 $testsPath = Join-Path $scriptPath "_tests"
 Reset-Directory $testsPath
