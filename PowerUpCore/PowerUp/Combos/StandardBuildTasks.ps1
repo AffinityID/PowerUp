@@ -7,7 +7,6 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 Import-Module PowerUpUtilities
-Import-Module PowerUpTestRunner
 Import-Module PowerUpFileSystem
 Import-Module PowerUpZip
 Import-Module PowerUpNuGet
