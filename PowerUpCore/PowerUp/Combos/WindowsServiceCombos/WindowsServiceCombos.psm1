@@ -35,7 +35,9 @@ function Invoke-ComboStandardWindowsService($options) {
             enablerecovery = $false
             resetfailurecountafterseconds = 86400
             firstactiondelayseconds = 0
+            secondaction = $null
             secondactiondelayseconds = 0
+            subsequentaction = $null
             subsequentactiondelayseconds = 0
         }
         donotstartimmediately = $false
