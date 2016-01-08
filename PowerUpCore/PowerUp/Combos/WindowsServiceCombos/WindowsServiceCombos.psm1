@@ -3,11 +3,6 @@ Set-StrictMode -Version 2
 
 Add-Type -TypeDefinition "public enum WindowsServiceCopyMode { Default, NoMirror, NoCopy }"
 
-function Invoke-Combo-StandardWindowsService($options) {
-    Write-Warning "Invoke-Combo-StandardWindowsService is obsolete/non-standard name, use Invoke-ComboStandardWindowsService instead."
-    Invoke-ComboStandardWindowsService $options
-}
-
 function Invoke-ComboStandardWindowsService($options) {
     Import-Module powerupfilesystem
     Import-Module powerupwindowsservice
@@ -35,7 +30,9 @@ function Invoke-ComboStandardWindowsService($options) {
             enablerecovery = $false
             resetfailurecountafterseconds = 86400
             firstactiondelayseconds = 0
+            secondaction = $null
             secondactiondelayseconds = 0
+            subsequentaction = $null
             subsequentactiondelayseconds = 0
         }
         donotstartimmediately = $false
