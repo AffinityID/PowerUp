@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 Add-Type @"
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Management.Automation;
 
@@ -22,12 +23,12 @@ public class PowerUpDynamicVariable : PSVariable {
             if (_getter == null)
                 throw new NotSupportedException("Dynamic variable " + Name + " has no get block and so can't be read.");
         
-            var results = _getter.Invoke();
+            Collection<PSObject> results = _getter.Invoke();
             if (results.Count == 1) {
                 return results[0];
             }
             else {
-                var returnResults = new PSObject[results.Count];
+                PSObject[] returnResults = new PSObject[results.Count];
                 results.CopyTo(returnResults, 0);
                 return returnResults;
             }
