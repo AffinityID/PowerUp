@@ -2,11 +2,8 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 $nuget = "$PSScriptRoot\NuGet.exe"
+$nupkgmerge = "$PSScriptRoot\NupkgMerge.exe"
 Add-Type -Path "$PSScriptRoot\NuGet.Core.dll"
-
-function Update-NuGet() {
-    Write-Warning "Update-NuGet is obsolete and does nothing at the moment."
-}
 
 function Update-NuSpecFromFiles(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
@@ -112,12 +109,25 @@ function New-NuGetPackage(
     Invoke-NuGet $command
 }
 
-function Send-NuGetPackage(
-    [Parameter(Mandatory=$true)][string] $packagePath,
-    [Parameter(Mandatory=$true)][uri] $serverUrl
+function Join-NuGetPackages(
+    [Parameter(Mandatory=$true)][string[]] $sourcePaths,
+    [Parameter(Mandatory=$true)][string] $targetPath,
+    [switch] [boolean] $force
 ) {
-    Write-Warning "Send-NuGetPackage is obsolete, use Publish-NuGetPackage instead."
-    Publish-NuGetPackage -PackagePath $packagePath -Source $serverUrl
+    if ((Test-Path $targetPath) -and !$force) {
+        throw "Path '$targetPath' already exists."
+    }
+
+    if ($sourcePaths.Length -le 1) {
+        Copy-Item $sourcePaths[0] $targetPath
+        exit
+    }
+
+    $lastPrimaryPath = $sourcePaths[0]
+    $sourcePaths | select -skip 1 | % {
+        Invoke-External "$nupkgmerge -p $lastPrimaryPath -s $_ -o $targetPath" | Write-Host
+        $lastPrimaryPath = $targetPath
+    }
 }
 
 function Publish-NuGetPackage(
@@ -178,13 +188,12 @@ function Join-NuGetSources(
     return "`"$($sources -join ';')`""
 }
 
-export-modulemember -function Update-NuGet,
-                              Get-NuGetPackage,
+export-modulemember -function Get-NuGetPackage,
                               Test-NuGetPackage,
                               Restore-NuGetPackages,
                               Update-NuSpecFromFiles,
                               New-NuGetPackage,
-                              Send-NuGetPackage,
+                              Join-NuGetPackages,
                               Publish-NuGetPackage,
                               Install-NuGetPackage,
                               Invoke-NuGet
