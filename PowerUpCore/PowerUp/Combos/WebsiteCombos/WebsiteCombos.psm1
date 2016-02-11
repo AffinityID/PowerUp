@@ -53,11 +53,12 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     
     $options.bindings | % {
         Merge-Defaults $_ @{
-            protocol = "http";
-            ip = "*";
-            port = { if ($_.protocol -eq 'https') { 443 } else { 80 } };
-            useselfsignedcert = $true;
-            certname = { $options.websitename };
+            protocol = "http"
+            ip = "*"
+            port = { if ($_.protocol -eq 'https') { 443 } else { 80 } }
+            useselfsignedcert = $true
+            certname = { $options.websitename }
+            usesni = $false
             '[ordered]' = @('protocol','port')
         }
     }
@@ -153,16 +154,22 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     $firstBinding = $options.bindings[0]
     set-website $options.websitename $options.apppool.name $options.fulldestinationpath $firstBinding.url $firstBinding.protocol $firstBinding.ip $firstBinding.port (!$options.recreatewebsite)
     
-    foreach($binding in $options.bindings)
-    {
-        if($binding.protocol -eq "https")
-        {
-            Set-WebsiteForSsl $binding.useselfsignedcert $options.websitename $binding.certname $binding.ip $binding.port $binding.url
+    foreach($binding in $options.bindings) {
+        if($binding.protocol -eq "https") {
+            if ($binding.useselfsignedcert) {
+                Write-Host "Set-SelfSignedSslcCertificate $($binding.certname)"
+                Set-SelfSignedSslCertificate $binding.certname
+            }
+
+            Set-SslBinding $binding.certname $binding.ip $binding.port
         }
-        else
-        {
-            set-websitebinding $options.websitename $binding.url $binding.protocol $binding.ip $binding.port
-        }
+        Set-WebSiteBinding `
+            -WebSiteName $options.websitename `
+            -HostHeader $binding.url `
+            -Protocol $binding.protocol `
+            -IPAddress $binding.ip `
+            -Port $binding.port `
+            -UseSni:$($binding.usesni)
     }
     
     if($options.virtualdirectories)

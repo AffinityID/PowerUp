@@ -93,18 +93,6 @@ function SetAppPoolManagedRuntimeVersion($appPool, $runtimeVersion)
 	$appPool.managedRuntimeVersion = $runtimeVersion
 }
 
-function Set-WebsiteForSsl($useSelfSignedCert, $websiteName, $certificateName, $ipAddress, $port, $url)
-{
-	if ([System.Convert]::ToBoolean($useSelfSignedCert))
-	{
-		write-host "set-selfsignedsslcertificate ${certificateName}"
-		set-selfsignedsslcertificate ${certificateName}
-	}
-		
-	set-sslbinding $certificateName $ipAddress $port
-	set-websitebinding $websiteName $url "https" $ipAddress $port 
-}
-
 function GetSslCertificate($certName)
 {
 	if ($certName.StartsWith("*")) {
@@ -276,29 +264,28 @@ function EnsureSelfSignedSslCertificate($certName)
 	}
 }
 
-function Set-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80")
-{
+function Set-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
     if ($hostHeader -eq "" -or $hostHeader -eq "*") {
         #temporary special case to handle bindings with blank host header.
         try {
-            new-websitebinding $websiteName $hostHeader $protocol $ip $port 
+            New-WebsiteBinding $websiteName $hostHeader $protocol $ip $port -UseSni:$useSni
         } catch {
             $_
         }
-    } else {
-        $existingBinding = get-webbinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader    
-        
-        if(!$existingBinding) {
-            new-websitebinding $websiteName $hostHeader $protocol $ip $port 
-        }        
+    }
+    else {
+        $existingBinding = Get-WebBinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader
+        if (!$existingBinding) {
+            New-WebsiteBinding $websiteName $hostHeader $protocol $ip $port -UseSni:$useSni
+        }
     }
     
 }
 
-function New-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80")
-{
-	write-host "Binding website $websiteName to host header $hostHeader with IP $ip, port $port over $protocol"
-	New-WebBinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader
+function New-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
+    $sslFlags = $(if ($useSni) { 1 } else { 0 })
+    Write-Host "Binding website $websiteName to host header $hostHeader with IP $ip, port $port, flags over $protocol"
+    New-WebBinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader -SslFlags $sslFlags
 }
 
 function New-WebSiteBindingNonHttp($websiteName, $protocol, $bindingInformation)
@@ -452,12 +439,11 @@ export-modulemember -function set-webapppool32bitcompatibility,
                                uninstall-website,
                                set-webapppool,
                                uninstall-webapppool,
-                               set-websitebinding,
+                               Set-WebSiteBinding,
                                New-WebSiteBinding,
                                New-WebSiteBindingNonHttp,
                                set-SelfSignedSslCertificate,
                                set-sslbinding,
-                               Set-WebsiteForSsl,
                                set-property,
                                set-webproperty,
                                Begin-WebChangeTransaction,
