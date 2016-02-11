@@ -229,7 +229,7 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
             {
                 foreach ($directory in $options.virtualdirectories)
                 {
-                    Send-HttpRequest GET "$rootUrl/$($virtualdirectory.directoryname)" -IgnoreSslErrors:$ignoreSslErrors
+                    Send-HttpRequest GET "$bindingRootUrl/$($virtualdirectory.directoryname)" -IgnoreSslErrors:$ignoreSslErrors
                 }
             }
         }
