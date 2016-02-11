@@ -114,9 +114,8 @@ function GetSslCertificate($certName)
 	Get-ChildItem cert:\LocalMachine\MY | Where-Object {$_.Subject -match "${certName}"} | Select-Object -First 1
 }
 
-function SslBindingExists($ip, $port)
-{
-	return ((dir IIS:\sslbindings | Where-Object {($_.Port -eq $port) -and ($_.IPAddress -contains $ip)}) | measure-object).Count -gt 0
+function SslBindingExists($ip, $port) {
+    return (Get-ChildItem IIS:\sslbindings | Where-Object {($_.Port -eq $port) -and ($_.IPAddress -contains $ip)} | Measure-Object).Count -gt 0
 }
 
 function CreateSslBinding($certificate, $ip, $port)
