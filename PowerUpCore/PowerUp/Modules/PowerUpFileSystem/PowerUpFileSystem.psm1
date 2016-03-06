@@ -134,7 +134,11 @@ function Copy-FilteredDirectory(
     [string[]] $excludeFilter
 ) {
     Ensure-Directory $destinationPath
-    $source = Get-Item $sourcePath
+    $sources = Get-Item $sourcePath
+    if (!$sources) {
+        throw "Could not find source path $sourcePath to copy."
+    }
+    
     $destination = Get-Item $destinationPath
     
     if (!$includeFilter) {
@@ -142,10 +146,13 @@ function Copy-FilteredDirectory(
     }
 
     $createdDirectories = @()
-    Get-MatchedPaths -Path $sourcePath -Includes $includeFilter -Excludes $excludeFilter | % {    
-        $itemDestination = Join-Path $destination.FullName $_.RelativePath
-        [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($itemDestination)) | Out-Null
-        Copy-Item -Path $_.FullPath -Destination $itemDestination
+    $sources | % {
+        Write-Host "Copying $(Resolve-Path $_.FullName -Relative) => $destinationPath"
+        Get-MatchedPaths -Path $($_.FullName) -Includes $includeFilter -Excludes $excludeFilter | % {    
+            $itemDestination = Join-Path $destination.FullName $_.RelativePath
+            [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($itemDestination)) | Out-Null
+            Copy-Item -Path $_.FullPath -Destination $itemDestination
+        }
     }
 }
 
