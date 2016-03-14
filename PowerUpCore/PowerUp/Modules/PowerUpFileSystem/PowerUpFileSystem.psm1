@@ -84,7 +84,7 @@ function Invoke-Robocopy(
     })
 
     $filesString = ($files | % { "`"$_`"" }) -Join ' '
-    $command = "$PSScriptRoot\robocopy.exe `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"
+    $command = "&'$PSScriptRoot\robocopy.exe' `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"
     Write-Host $command
     Invoke-Expression $command
     if ($LastExitCode -ge 8) {
