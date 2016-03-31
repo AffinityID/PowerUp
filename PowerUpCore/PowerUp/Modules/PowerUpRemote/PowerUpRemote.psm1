@@ -138,40 +138,34 @@ function invoke-remotetaskwithremoting(
 	write-host "========= Finished execution of tasks $tasks on server $serverName ====="
 }
 
-function copy-package($servers, $packageName)
-{		
-	import-module powerupfilesystem
+$packageAlreadyCopied = @{}
+function Copy-Package([Parameter(Mandatory = $true)] $servers, [Parameter(Mandatory = $true)] [string] $packageName) {
+    # TODO: Move to the module level
+    Set-StrictMode -Version 2
+    $ErrorActionPreference = 'Stop'
 
-	foreach ($server in $servers)
-	{	
-		$remoteDir = $server['remote.temp.working.folder']
-		$serverName = $server['server.name']
-		
-		if(!$remoteDir)
-		{
-			throw "Setting remote.temp.working.folder not set for server $serverName"
-		}
-			
-		$remotePath = $remoteDir + '\' + $packageName
-		$currentLocation = get-location
+    Import-Module PowerUpFileSystem
 
-		$packageCopyRequired = $false
-				
-		if ((!(Test-Path $remotePath\package.id) -or !(Test-Path $currentLocation\package.id)))
-		{		
-			$packageCopyRequired = $true
-		}
-		else
-		{
-			$packageCopyRequired = !((Get-Item $remotePath\package.id).LastWriteTime -eq (Get-Item $currentLocation\package.id).LastWriteTime)
-		}
-		
-		if ($packageCopyRequired)
-		{	
-			write-host "Copying deployment package to $remotePath"
-			Copy-MirroredDirectory $currentLocation $remotePath
-		}
-	}
+    foreach ($server in $servers) {	
+        $remoteDir = $server['remote.temp.working.folder']
+        $serverName = $server['server.name']
+        if(!$remoteDir) {
+            throw "Setting remote.temp.working.folder not set for server $serverName"
+        }
+
+        $remotePath = $remoteDir + '\' + $packageName
+        $currentLocation = Get-Location
+
+        $packageCopyRequired = !$packageAlreadyCopied["$serverName::$remotePath"]
+        if ($packageCopyRequired) {	
+            Write-Host "Copying deployment package to $remotePath"
+            Copy-MirroredDirectory $currentLocation $remotePath
+            $packageAlreadyCopied["$serverName::$remotePath"] = $true
+        }
+        else {
+            Write-Host "Deployment package was already copied to $remotePath in this session."
+        }
+    }
 }	
 
 function get-serverSettings($settingsFunction, $serverNames)
