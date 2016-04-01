@@ -244,7 +244,7 @@ function set-WebSite($websiteName, $appPoolName, $fullPath, $hostHeader, $protoc
     $id = (Get-ChildItem $sitesPath | % { $_.id } | sort -Descending | select -first 1) + 1
     
     write-host "Recreating website $websiteName with path $fullPath, app pool $apppoolname, bound to to host header $hostHeader with IP $ip, port $port over $protocol"
-    New-Item $sitesPath\$websiteName -id $id -physicalPath $fullPath -applicationPool $appPoolName -bindings @{protocol="http";bindingInformation="${ip}:${port}:${hostHeader}"}
+    New-Item $sitesPath\$websiteName -id $id -physicalPath $fullPath -applicationPool $appPoolName -bindings @{protocol=$protocol;bindingInformation="${ip}:${port}:${hostHeader}"}
 }
 
 function set-SelfSignedSslCertificate($certName)
@@ -284,8 +284,14 @@ function Set-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*"
 
 function New-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
     $sslFlags = $(if ($useSni) { 1 } else { 0 })
-    Write-Host "Binding website $websiteName to host header $hostHeader with IP $ip, port $port, flags over $protocol"
-    New-WebBinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader -SslFlags $sslFlags
+    Write-Host "Binding website $websiteName to host header $hostHeader with IP $ip, port $port, flags $sslFlags over $protocol"
+    if ($sslFlags -gt 0) {
+        New-WebBinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader -SslFlags $sslFlags
+    }
+    else {
+        # Some older versions do not support -SslFlags argument at all
+        New-WebBinding -Name $websiteName -IP $ip -Port $port -Protocol $protocol -HostHeader $hostHeader
+    }
 }
 
 function New-WebSiteBindingNonHttp($websiteName, $protocol, $bindingInformation)
