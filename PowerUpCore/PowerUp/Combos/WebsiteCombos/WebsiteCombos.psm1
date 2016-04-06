@@ -56,7 +56,7 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
             protocol = "http"
             ip = "*"
             port = { if ($_.protocol -eq 'https') { 443 } else { 80 } }
-            useselfsignedcert = $true
+            useselfsignedcert = $false
             certname = { $options.websitename }
             usesni = $false
             '[ordered]' = @('protocol','port')
@@ -161,7 +161,8 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
                 Set-SelfSignedSslCertificate $binding.certname
             }
 
-            Set-SslBinding $binding.certname $binding.ip $binding.port
+            $sslHost = $(if ($binding.usesni) { $binding.url } else { '*' })
+            Set-SslBinding $binding.certname -IP $binding.ip -Port $binding.port -Host $sslHost
         }
         Set-WebSiteBinding `
             -WebSiteName $options.websitename `

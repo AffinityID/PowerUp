@@ -1,7 +1,6 @@
 $iisPath = "IIS:\"
 $sitesPath = "IIS:\sites"
 $appPoolsPath = "IIS:\apppools"
-$bindingsPath = "IIS:\sslbindings"
 
 $ModuleName = "WebAdministration"
 $ModuleLoaded = $false
@@ -100,19 +99,6 @@ function GetSslCertificate($certName)
 		$certName = "\" + $certName
 	}
 	Get-ChildItem cert:\LocalMachine\MY | Where-Object {$_.Subject -match "${certName}"} | Select-Object -First 1
-}
-
-function SslBindingExists($ip, $port) {
-    return (Get-ChildItem IIS:\sslbindings | Where-Object {($_.Port -eq $port) -and ($_.IPAddress -contains $ip)} | Measure-Object).Count -gt 0
-}
-
-function CreateSslBinding($certificate, $ip, $port)
-{
-	$existingPath = get-location
-	set-location $bindingsPath
-	
-	$certificate | new-item "${ip}!${port}"
-	set-location $existingPath
 }
 
 function set-webapppool32bitcompatibility($appPoolName)
@@ -300,19 +286,41 @@ function New-WebSiteBindingNonHttp($websiteName, $protocol, $bindingInformation)
 	New-ItemProperty $sitesPath\$websiteName –name bindings –value @{protocol="$protocol";bindingInformation="$bindingInformation"}
 }
 
-function Set-SslBinding($certName, $ip, $port)
-{
-	write-host "Binding certifcate $certName to IP $ip, port $port"
-	$certificate = GetSslCertificate $certName
-	
-	if (!$certificate) {throw "Certificate for site $certName not in current store"}
+function Set-SslBinding(
+    [Parameter(Mandatory=$true)] [string] $certificateName,
+    [Parameter(Mandatory=$true)] [string] $ip,
+    [Parameter(Mandatory=$true)] [string] $port,
+    [string] $host = '*'
+) {
+    Write-Host "Binding certificate $certificateName to IP $ip, port $port, host $host."
+    $certificate = GetSslCertificate $certificateName
 
-	if($ip -eq "*") {$ip = "0.0.0.0"}
-	
-	if(!(SslBindingExists $ip $port))
-	{
-		CreateSslBinding $certificate $ip $port
-	}
+    if (!$certificate) {
+        throw "Certificate $certificateName was not found in current store."
+    }
+
+    $pathIP = $(if ($ip -ne '*') { $ip } else { '' })    
+    $path = "IIS:\SslBindings\$pathIP!$port"
+    if ($host -ne '*') {
+        if (!$host) {
+            Write-Error "Host must not be empty (use * instead)."
+        }
+
+        $path += "!$host"
+    }
+
+    if (Test-Path $path) {
+        Write-Host "Removing existing binding for IP $ip, port $port, host $host."
+        Remove-Item $path
+    }
+
+    if ($host -ne '*') {
+        $certificate | New-Item $path -SslFlags 1 | Out-Null
+    }
+    else {
+        # Older versions might not have SslFlags
+        $certificate | New-Item $path | Out-Null
+    }
 }
 
 function Register-VirtualDirectory($websiteName, $subPath, $physicalPath)
@@ -449,7 +457,7 @@ export-modulemember -function set-webapppool32bitcompatibility,
                                New-WebSiteBinding,
                                New-WebSiteBindingNonHttp,
                                set-SelfSignedSslCertificate,
-                               set-sslbinding,
+                               Set-SslBinding,
                                set-property,
                                set-webproperty,
                                Begin-WebChangeTransaction,
