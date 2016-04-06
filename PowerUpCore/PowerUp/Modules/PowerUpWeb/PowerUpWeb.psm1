@@ -315,11 +315,11 @@ function Set-SslBinding(
     }
 
     if ($host -ne '*') {
-        $certificate | New-Item $path -SslFlags 1
+        $certificate | New-Item $path -SslFlags 1 | Out-Null
     }
     else {
         # Older versions might not have SslFlags
-        $certificate | New-Item $path
+        $certificate | New-Item $path | Out-Null
     }
 }
 
