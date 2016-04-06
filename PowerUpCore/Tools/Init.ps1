@@ -8,7 +8,7 @@ param (
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-$env:PSModulePath += ";$installPath\PowerUp\Modules"
+$env:PSModulePath += ";$(Resolve-Path $installPath)\PowerUp\Modules"
 
 Import-Module PowerUpFileSystem
 if (Test-Path  '.\_powerup\Modules') {
