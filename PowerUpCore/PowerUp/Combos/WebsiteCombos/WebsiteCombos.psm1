@@ -161,7 +161,8 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
                 Set-SelfSignedSslCertificate $binding.certname
             }
 
-            Set-SslBinding $binding.certname $binding.ip $binding.port
+            $sslHost = $(if ($binding.usesni) { $binding.url } else { '*' })
+            Set-SslBinding $binding.certname -IP $binding.ip -Port $binding.port -Host $sslHost
         }
         Set-WebSiteBinding `
             -WebSiteName $options.websitename `
