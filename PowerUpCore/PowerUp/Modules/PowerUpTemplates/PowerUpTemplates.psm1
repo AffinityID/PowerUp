@@ -20,7 +20,12 @@ function Merge-Templates($profile) {
 
     Copy-Directory $currentPath\_templates $currentPath\_templatesoutput\$profile
     Get-ChildItem $currentPath\_templatesoutput\$profile -Recurse | ? { !($_.PSIsContainer) } | % {
-        Expand-Template $_.FullName
+        $path = $_.FullName
+
+        Write-Host "Expanding template '$path'"
+        $content = [IO.File]::ReadAllText($path)
+        $expanded = Expand-Template $content -OriginalPath $path
+        [IO.File]::WriteAllText($path, $content)
     }
 
     if ((Test-Path $currentPath\_templatesoutput\$profile -PathType Container)) {
@@ -28,10 +33,11 @@ function Merge-Templates($profile) {
     }
 }
 
-function Expand-Template($path) {
-    Write-Host "Expanding template '$path'"
-    $content = [IO.File]::ReadAllText($path)
-    $errors = @()
+function Expand-Template(
+    [Parameter(Mandatory=$true)] [string] $content,
+    [string] $originalPath = '<unknown>'
+) {
+    $errors = New-Object Collections.Generic.List[string]
     $regex = New-Object Regex(
 @'
     \$
@@ -61,18 +67,20 @@ function Expand-Template($path) {
             $result = (Invoke-Expression "Set-StrictMode -Version 2; `$ErrorActionPreference = 'Stop'; `"$($match.Value)`"")
         }
         catch {
-            $errors += "$($match.Value): $_"
+            $errors.Add("$($match.Value): $_")
             $result = 'error!'
         }
         Write-Host "  $($match.Value) => $result"
         return $result
     })
-    
-    if ($errors.Length -gt 0) {
-        Write-Error "Failed to expand values in $path`:`r`n  $($errors -join "  `r`n")"
-    }
 
-    [IO.File]::WriteAllText($path, $content)
+    if ($errors.Count -gt 0) {
+        Write-Error "Failed to expand values in $originalPath`:`r`n  $($errors -join "  `r`n")"
+    }
+    
+    return $content
 }
 
-Export-ModuleMember -function Merge-Templates, Merge-ProfileSpecificFiles
+Export-ModuleMember -Function Merge-Templates,
+                              Merge-ProfileSpecificFiles,
+                              Expand-Template
