@@ -151,6 +151,10 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
         &$setAppPoolIdentity($options.apppool)
     }
     
+    if ($options.apppool.idletimeout -ne $null) {
+        Set-AppPoolIdleTimeout $options.apppool.name $options.apppool.idletimeout
+    }
+
     $firstBinding = $options.bindings[0]
     set-website $options.websitename $options.apppool.name $options.fulldestinationpath $firstBinding.url $firstBinding.protocol $firstBinding.ip $firstBinding.port (!$options.recreatewebsite)
     

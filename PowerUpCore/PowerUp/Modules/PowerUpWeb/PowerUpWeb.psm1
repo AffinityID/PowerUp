@@ -437,6 +437,16 @@ function End-WebChangeTransaction()
 	return End-WebCommitDelay
 }
 
+function Set-AppPoolIdleTimeout(
+	[Parameter(Mandatory=$true)] [string] $appPoolName, 
+	[Parameter(Mandatory=$true)] [int] $mins)
+{
+	write-host "Setting $appPoolName Idle Time-out to $mins minutes"
+	$appPool = Get-Item $appPoolsPath\$appPoolName
+	$appPool.processModel.idleTimeout = [TimeSpan]::FromMinutes($mins)
+	$appPool | Set-Item
+}
+
 export-modulemember -function set-webapppool32bitcompatibility,
                                set-apppoolidentitytouser,
                                set-apppoolidentityType,
@@ -461,4 +471,5 @@ export-modulemember -function set-webapppool32bitcompatibility,
                                set-property,
                                set-webproperty,
                                Begin-WebChangeTransaction,
-                               End-WebChangeTransaction
+                               End-WebChangeTransaction,
+                               Set-AppPoolIdleTimeout
