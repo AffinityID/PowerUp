@@ -25,7 +25,7 @@ function Merge-Templates($profile) {
         Write-Host "Expanding template '$path'"
         $content = [IO.File]::ReadAllText($path)
         $expanded = Expand-Template $content -OriginalPath $path
-        [IO.File]::WriteAllText($path, $content)
+        [IO.File]::WriteAllText($path, $expanded)
     }
 
     if ((Test-Path $currentPath\_templatesoutput\$profile -PathType Container)) {
