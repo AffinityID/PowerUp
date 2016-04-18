@@ -300,13 +300,27 @@ function Set-SslBinding(
     }
 
     $pathIP = $(if ($ip -ne '*') { $ip } else { '' })    
-    $path = "IIS:\SslBindings\$pathIP!$port"
-    if ($host -ne '*') {
-        if (!$host) {
-            Write-Error "Host must not be empty (use * instead)."
-        }
+    $path = "IIS:\SslBindings\"
 
-        $path += "!$host"
+    if (!$host) {
+        throw "Host must not be empty (use * instead)."
+    }
+
+    if ($host -ne '*') {
+        if ($ip -ne '*') {
+            $path += "$ip!$port!$host"
+        }
+        else {
+            $path += "!$port!$host"
+        }
+    }
+    else {
+        if ($ip -ne '*') {
+            $path += "$ip!$port"
+        }
+        else {
+            $path += "0.0.0.0!$port"
+        }
     }
 
     if (Test-Path $path) {
