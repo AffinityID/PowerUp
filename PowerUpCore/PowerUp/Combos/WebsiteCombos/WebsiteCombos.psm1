@@ -35,7 +35,8 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
             dotnetversion = "v4.0";
             name = { $options.websitename };
             username = $null;
-            identity = $null
+            identity = $null;
+		    idletimeout = $null
         };
         bindings = @(@{});
         virtualdirectories = @();
