@@ -7,19 +7,15 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
     Write-Host "Test options: $($options | Out-String)"
 
     $testErrors = @()
-    if ($options['default']) {
-        Write-Error "Option 'default' is obsolete and no longer supported. Set test options per runner instead."
-    }
-    
+            
     $nunit = $options['nunit']
     if ($nunit -ne $null) {
-        Import-Module PowerUpNUnit # not separated yet, but ready to be
-        Merge-Defaults $nunit @{ paths = @() }
-
-        @('rootpath', 'pathfilter', 'filefilter') | % {
-            if ($nunit[$_]) { Write-Error "Option '$_' is obsolete and no longer supported. Use 'paths' instead." }
+        if (!(Get-Module -ListAvailable -Name PowerUpNUnit)) {
+            Write-Error "PowerUpNUnit module is not found: make sure PowerUp.NUnit package is installed."
         }
-
+        
+        Import-Module PowerUpNUnit
+        Merge-Defaults $nunit @{ paths = @() }
         Get-MatchedPaths -Includes $nunit.paths | % {
             Invoke-NUnitTests (Get-Item $_.FullPath) -ErrorAction Continue -ErrorVariable testError
             if ($testError) {

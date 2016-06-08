@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>AffinityID.PowerUp.NUnit</id>
+    <version>$version$</version>
+    <authors>Affinity ID</authors>
+    <owners>Affinity ID</owners>
+    <projectUrl>https://github.com/AffinityID/PowerUp.git</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NUnit add-on for PowerUp.</description>
+    <releaseNotes />
+    <copyright />
+    <tags>Deployment PowerShell PSake NUnit</tags>
+    <developmentDependency>true</developmentDependency>
+    <dependencies>
+      <dependency id="AffinityID.PowerUp" />
+      <dependency id="NUnit.ConsoleRunner" version="3.0.0" />
+    </dependencies>
+  </metadata>
+</package>
