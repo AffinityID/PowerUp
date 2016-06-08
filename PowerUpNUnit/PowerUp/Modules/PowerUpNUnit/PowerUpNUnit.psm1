@@ -18,9 +18,8 @@ function Invoke-NUnitTests {
     }
 
     # Run test
-    $resultFileName = $testSuitePathObject.Name    
-    $cmd = "$nunitExePath /result=.\$resultsDirectory\$resultFileName.xml $testSuitePathObject"
-    Invoke-External $cmd -ErrorAction $ErrorActionPreference
+    $resultFileName = $testSuitePathObject.Name
+    Invoke-External "$nunitExePath $testSuitePathObject --result $(Format-ExternalEscaped ".\$resultsDirectory\$resultFileName.xml;format=nunit2")" -ErrorAction $ErrorActionPreference
 }
 
 Export-ModuleMember -function Invoke-NUnitTests

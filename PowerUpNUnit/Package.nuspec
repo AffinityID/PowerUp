@@ -15,6 +15,7 @@
     <dependencies>
       <dependency id="AffinityID.PowerUp" />
       <dependency id="NUnit.ConsoleRunner" version="3.0.0" />
+      <dependency id="NUnit.Extension.NUnitV2ResultWriter" version="3.0.0" />
     </dependencies>
   </metadata>
 </package>
