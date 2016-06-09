@@ -1,0 +1,2 @@
+This module is provided by PowerUpNUnit NuGet package.
+This is a marker file that prevents PowerUp Init.ps1 from purging this folder from _powerup.
