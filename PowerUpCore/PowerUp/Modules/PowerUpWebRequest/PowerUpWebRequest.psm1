@@ -6,6 +6,7 @@ function Send-HttpRequest(
     [Parameter(Mandatory=$true)] [string] $url,
     [string] $content = "",
     [string] $contentType = "application/json",
+    [Hashtable] $headers = @{},
     [switch] $ignoreSslErrors = $false
 ) {
     Import-Module PowerUpUtilities
@@ -32,11 +33,19 @@ function Send-HttpRequest(
     }
 
     write-Host "$method $url"
+    foreach ($header in $headers.GetEnumerator()) {
+        Write-Host "$($header.Key): $($header.Value)"
+        $request.Headers.Add($header.Key, $header.Value);
+    }
+    
     if ($content) {
-        write-Host $content
         $contentBytes = [System.Text.Encoding]::UTF8.GetBytes($content)
         $request.ContentLength = $contentBytes.Length
         $request.ContentType = "$contentType; charset=utf-8"
+        Write-Host "Content-Type: $($request.ContentType)"
+        Write-Host "Content-Length: $($request.ContentLength)"
+        Write-Host ""
+        write-Host $content
         Use-Object $request.GetRequestStream() {
             param ($stream)
             $stream.Write($contentBytes, 0, $contentBytes.Length)

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>AffinityID.PowerUp.Sql</id>
+    <version>$version$</version>
+    <authors>Affinity ID</authors>
+    <owners>Affinity ID</owners>
+    <projectUrl>https://github.com/AffinityID/PowerUp.git</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>SQL querying support for PowerUp.</description>
+    <releaseNotes />
+    <copyright />
+    <tags>Deployment PowerShell PSake Sql</tags>
+    <developmentDependency>true</developmentDependency>
+    <dependencies>
+      <dependency id="AffinityID.PowerUp" />
+    </dependencies>
+  </metadata>
+</package>
