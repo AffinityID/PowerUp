@@ -31,12 +31,12 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
         fullsourcepath = { "$(get-location)\$($options.sourcefolder)" };
         aftercopy = { {} };
         apppool = @{
-            executionmode = "Integrated";
-            dotnetversion = "v4.0";
-            name = { $options.websitename };
-            username = $null;
-            identity = $null;
-		    idletimeout = $null
+            executionmode = "Integrated"
+            dotnetversion = "v4.0"
+            name = { $options.websitename }
+            username = $null
+            identity = $null
+            idletimeout = $null
         };
         bindings = @(@{});
         virtualdirectories = @();
@@ -47,6 +47,7 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
             media = $false
             code = { Write-Warning "No backup code found"; @() }
         };
+        beforestart = { {} };
         startwebsiteafter = $true;
         tryrequestwebsite = $false;
         '[ordered]' = @('destinationfolder','sourcefolder','fulldestinationpath','fullsourcepath','backup')
@@ -224,7 +225,9 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     #         set-apppoolstartMode $options.websitename 1
     #     }
     # }
-    
+
+    &($options.beforestart)
+
     if($options.startwebsiteafter)
     {
         start-apppoolandsite $options.apppool.name $options.websitename

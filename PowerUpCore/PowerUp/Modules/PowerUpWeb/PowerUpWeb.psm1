@@ -441,6 +441,31 @@ function set-webproperty($websiteName, $propertyPath, $property, $value)
 	Set-WebConfigurationProperty -filter $propertyPath -name $property -value $value -location $websiteName
 }
 
+Add-Type -TypeDefinition "public enum WebSiteAuthenticationType {
+    Anonymous,
+    Basic,
+    ClientCertificateMapping,
+    Digest,
+    IisClientCertificateMapping,
+    Windows
+}"
+function Set-WebSiteAuthentication(
+    [Parameter(Mandatory=$true)] [string] $siteName,
+    [Parameter(Mandatory=$true)] [WebSiteAuthenticationType] $authenticationType,
+    [Parameter(Mandatory=$true)] [Hashtable] $properties
+) {
+    Write-Host "Setting $siteName $authenticationType authentication properties:$($properties | Out-String)"
+    
+    $authenticationTypeString = ($authenticationType.ToString() | % { [char]::ToLower($_[0]) + $_.Substring(1) })
+    $filter = "/system.webServer/security/authentication/$($authenticationTypeString)Authentication"
+    $path = "IIS:\Sites\$siteName"
+    
+    $properties.GetEnumerator() | % {
+        Write-Host "Set-WebConfigurationProperty -PSPath $path -Filter $filter -Name $($_.Key) -Value $($_.Value)"
+        Set-WebConfigurationProperty -PSPath $path -Filter $filter -Name $_.Key -Value $_.Value
+    }
+}
+
 function Begin-WebChangeTransaction()
 {
 	return Begin-WebCommitDelay
@@ -460,7 +485,6 @@ function Set-AppPoolIdleTimeout(
 	$appPool.processModel.idleTimeout = [TimeSpan]::FromMinutes($mins)
 	$appPool | Set-Item
 }
-
 export-modulemember -function set-webapppool32bitcompatibility,
                                set-apppoolidentitytouser,
                                set-apppoolidentityType,
@@ -486,4 +510,5 @@ export-modulemember -function set-webapppool32bitcompatibility,
                                set-webproperty,
                                Begin-WebChangeTransaction,
                                End-WebChangeTransaction,
-                               Set-AppPoolIdleTimeout
+                               Set-AppPoolIdleTimeout,
+                               Set-WebSiteAuthentication
