@@ -90,6 +90,7 @@ function Invoke-Robocopy(
     if ($LastExitCode -ge 8) {
         throw "Robocopy exited with exit code $LastExitCode"
     }
+    $global:LastExitCode = 0
 }
 
 function Write-FileToConsole([string]$fileName)
