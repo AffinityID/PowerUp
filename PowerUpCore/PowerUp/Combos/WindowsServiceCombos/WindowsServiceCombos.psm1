@@ -14,16 +14,7 @@ function Invoke-ComboStandardWindowsService($options) {
         fulldestinationpath = { Join-Path $options.serviceroot $options.destinationfolder }
         fullsourcepath = { Join-Path (Get-Location) $options.sourcefolder }
         exename = { "$($options.servicename).exe" }
-        copymode = {
-            if ($options.ContainsKey("copywithoutmirror")) {
-                Write-Warning "Option 'copywithoutmirror' is obsolete, use 'copymode' (Default/NoMirror) instead."
-                if ($options.copywithoutmirror) {
-                    return [WindowsServiceCopyMode]::NoMirror
-                }
-            }
-            
-            return [WindowsServiceCopyMode]::Default
-        }
+        copymode = [WindowsServiceCopyMode]::Default
         beforecopy = { {} }
         aftercopy = { {} }
         failureoptions = @{
@@ -37,6 +28,14 @@ function Invoke-ComboStandardWindowsService($options) {
         }
         donotstartimmediately = $false
         '[ordered]' = @('destinationfolder','sourcefolder','fulldestinationpath','fullsourcepath')
+    }
+    
+    if ($options.ContainsKey("copywithoutmirror")) {
+        Write-Error "Option 'copywithoutmirror' is obsolete, use 'copymode' (Default/NoMirror) instead."
+    }
+    
+    if ($options.ContainsKey("serviceaccountusername")) {
+        Write-Error "Option 'serviceaccountusername' is obsolete, use 'credentials' (PSCredential) instead."
     }
     
     Write-Host "Service options: $($options | Out-String)"
@@ -57,8 +56,8 @@ function Invoke-ComboStandardWindowsService($options) {
     &($options.aftercopy)
 
     Install-Service $options.servicename (Join-Path $options.fulldestinationpath $options.exename)
-    if ($options.serviceaccountusername) {
-        Set-ServiceCredentials $options.servicename $options.serviceaccountusername $options.serviceaccountpassword
+    if ($options.credentials) {        
+        Set-ServiceCredentials $options.servicename $options.credentials
     }
 
     if ($options.failureoptions.enablerecovery) {

@@ -1,59 +1,46 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-function Set-ServiceCredentials
+function Set-ServiceCredentials(
+    [Parameter(Mandatory=$true)] [string] $name,
+    [Parameter(Mandatory=$true)] [PSCredential] $credentials
+)
 {
-    param
-    (
-        [string] $Name = $(throw 'Must provide a service name'),
-        [string] $Username = $(throw "Must provide a username"),
-        [string] $Password = $(throw "Must provide a password")
-    ) 
-    
-	if (!($Username.Contains("\")))
-	{
-        $Username = "$env:COMPUTERNAME\$Username"
+    $username = $credentials.UserName    
+    if (!$username.Contains("\")) {
+        $username = "$env:COMPUTERNAME\$\username"
     }
-    
-    $service = gwmi win32_service -filter "name='$Name'"
-	if ($service -ne $null)
-	{
-        $params = $service.psbase.getMethodParameters("Change");
-        $params["StartName"] = $Username
-        $params["StartPassword"] = $Password
-    
-        $service.invokeMethod("Change", $params, $null)
 
-		Write-Output "Credentials changed for service '$Name'"
-	}
-	else
-	{
-		throw "Could not find service '$Name' for which to change credentials"
-	}
+    $service = Get-WmiObject Win32_Service -Filter "name='$name'"
+    if (!$service) {
+        throw "Service '$name' was not found."
+    }
+
+    Write-Output "Setting credentials for service '$Name' to '$username'"
+    $params = $service.PSBase.GetMethodParameters("Change")
+    $params["StartName"] = $username
+    $params["StartPassword"] = (New-Object Net.NetworkCredential('', $credentials.Password)).Password
+
+    $service.InvokeMethod("Change", $params, $null) | Out-Null
 }
 
-function Set-ServiceStartMode
+function Set-ServiceStartMode(
+    [Parameter(Mandatory=$true)] [string] $name,
+    [Parameter(Mandatory=$true)] [System.ServiceProcess.ServiceStartMode] $mode
+)
 {
-    param
-    (
-        [string] $Name = $(throw 'Must provide a service name'),
-        [string] $Mode = $(throw 'Must provide a new start mode')
-    ) 
-        
-    $service = gwmi win32_service -filter "name='$Name'"
-	if ($service -ne $null)
-	{
-        $params = $service.psbase.getMethodParameters("Change");
-        $params["StartMode"] = $Mode
-        $service.invokeMethod("Change", $params, $null)
+    $service = Get-WmiObject Win32_Service -Filter "name='$name'"
+    if (!$service) {
+        throw "Service '$name' was not found."
+    }
 
-		Write-Output "Start mode change to '$Mode' for service '$Name'"
-	}
-	else
-	{
-		throw "Could not find service '$Name' for which to change start mode"
-	}
+    Write-Output "Setting start mode for service '$Name' to '$mode'"
+    $params = $service.PSBase.GetMethodParameters("Change")
+    $params["StartMode"] = $mode.ToString()
+
+    $service.InvokeMethod("Change", $params, $null) | Out-Null
 }
+
 Add-Type -TypeDefinition "public enum ServiceFailureAction { Restart, Reboot }"
 function Set-ServiceFailureOptions
 {
@@ -108,7 +95,7 @@ function Get-SpecificService
     (
         [string] $Name = $(throw 'Must provide a service name')
     )
-	
+
 	Write-Warning "Get-SpecificService is obsolete, use Get-MaybeNonExistingService instead."
 	return Get-Service | Where-Object {$_.Name -eq $Name}
 }
@@ -167,10 +154,10 @@ function Uninstall-Service([Parameter(Mandatory=$true)][string]$name)
 
         Write-Host "  1. Ensuring service is stopped."
         Stop-Service $name
-        
+
         Write-Host "  2. Killing any open 'Services' windows to free service handles."
         taskkill /fi "windowtitle eq Services"
-        
+
         Write-Host "  3. Uninstalling service $name."
         &"$PSScriptRoot\InstallUtil.exe" $service.pathname /u /LogToConsole=true
     }
@@ -187,7 +174,7 @@ function Set-Service
         [string] $Name = $(throw 'Must provide a service name'),
 		[string] $InstallPath = $(throw 'Must provide a service name'),
 		[string] $ExeFileName = $(throw 'Must provide a service name')
-    ) 
+    )
 
     Write-Warning "Set-Service is obsolete, use Install-Service instead."
     Install-Service $Name "$InstallPath\$ExeFileName"

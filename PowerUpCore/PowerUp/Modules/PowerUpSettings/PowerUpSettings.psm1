@@ -134,14 +134,14 @@ function Import-Settings(
 }
 
 function Test-Setting(
-    [Parameter(Mandatory=$true)] [string] $setting,
+    [Parameter(Mandatory=$true)] [string] $name,
     [switch] $isTrue
 ) {
-    if (!(Test-Path variable:$setting)) {
+    if (!(Test-Path variable:$name)) {
         return $false
     }
 
-    $value = (Get-Variable -Name $setting).Value
+    $value = (Get-Variable -Name $name).Value
     if ([string]::IsNullOrWhiteSpace($value)) {
         return $false;
     }
@@ -153,4 +153,34 @@ function Test-Setting(
     return $true
 }
 
-Export-ModuleMember -Function Read-Settings, Import-Settings, Test-Setting
+function Get-Setting(
+    [Parameter(Mandatory=$true)] [string] $name,
+    [switch] $secure
+) {
+    if (!(Test-Path variable:$name)) {
+        throw "Setting '$name' was not found."
+    }
+
+    $value = (Get-Variable -Name $name).Value
+    if ($secure) {
+        $parts = $value -split ':'
+        if ($parts.Length -ne 3) {
+            throw "Secure setting '$name' must be in format machine:username:encrypted."
+        }
+
+        if ($parts[0] -ne [Environment]::MachineName) {
+            throw "Secure setting '$name' can be decrypted on $([Environment]::MachineName) only."
+        }
+
+        $user = "$([Environment]::UserDomainName)\$([Environment]::UserName)"
+        if ($parts[1] -ne $user) {
+            throw "Secure setting '$name' can be decrypted by $user only."
+        }
+
+        return ConvertTo-SecureString $parts[2]
+    }
+
+    return $value
+}
+
+Export-ModuleMember -Function Read-Settings, Import-Settings, Test-Setting, Get-Setting
