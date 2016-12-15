@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>AffinityID.PowerUp.FluentMigrator</id>
+    <id>AffinityID.PowerUp.Ftp</id>
     <version>$version$</version>
     <authors>Affinity ID</authors>
     <owners>Affinity ID</owners>
     <projectUrl>https://github.com/AffinityID/PowerUp.git</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>FluentMigrator module for PowerUp.</description>
+    <description>Ftp module for PowerUp.</description>
     <releaseNotes />
     <copyright />
-    <tags>Deployment PowerShell PSake FluentMigrator</tags>
+    <tags>Deployment PowerShell PSake Ftp</tags>
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <dependency id="AffinityID.PowerUp" />

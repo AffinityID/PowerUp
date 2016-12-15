@@ -138,9 +138,17 @@ function Publish-NuGetPackage(
 }
 
 function Restore-NuGetPackages(
-    [Parameter(Mandatory=$true)][string[]] $sources
+    [string] $project,
+    [string[]] $sources = @('https://api.nuget.org/v3/index.json'),
+    [string] $packagesDirectory = $null
 ) {
-    Invoke-NuGet "restore -source $(Join-NuGetSources $sources)"
+    Import-Module PowerUpUtilities
+    $projectEscaped = $(if ($project -ne $null) { (Format-ExternalEscaped $project) + " " } else { $null })
+    $command = "restore " + $projectEscaped + (Format-ExternalArguments @{
+        '-Source' = $(Join-NuGetSources $sources)
+        '-PackagesDirectory' = $packagesDirectory
+    })
+    Invoke-NuGet $command
 }
 
 function Install-NuGetPackage(

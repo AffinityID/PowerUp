@@ -17,7 +17,8 @@ $testResultsDirectory = "_testresults"
 properties {
     $Configuration = 'Release'
 
-    $NuGetServers = ('https://nuget.org')
+    $NuGetServerDefault = 'https://nuget.org'
+    $NuGetServers = ($NuGetServerDefault)
     $IntermediateRoot = '_buildtemp'
     $PackageRoot = '_package'
 
@@ -44,7 +45,7 @@ task Clean {
 }
 
 task RestorePackages {
-    Restore-NuGetPackages $NuGetServers
+    Restore-NuGetPackages -Sources $NuGetServers
 }
 
 task Build {

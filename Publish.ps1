@@ -20,6 +20,7 @@ Import-Module PowerUpNuGet
 @(
     'PowerUpCore',
     'PowerUpFluentMigrator',
+    'PowerUpFtp',
     'PowerUpJsonFallback',
     'PowerUpNUnit',
     'PowerUpPester',
@@ -27,7 +28,23 @@ Import-Module PowerUpNuGet
     'PowerUpSqlServer',
     'PowerUpSvn'
 ) | % {
-    Invoke-Robocopy .\$_ .\_output\$_ -Mirror -NoFileList -NoDirectoryList -NoJobHeader -NoJobSummary
+    Write-Host $_ -ForegroundColor White
+    if (Test-Path "$_\Prepare.ps1") {
+        if (Test-Path "$_\packages.config") {
+            Restore-NuGetPackages -Project "$_\packages.config" -Sources 'https://nuget.org/api/v2' -PackagesDirectory "$_\_packages"
+        }
+    
+        Push-Location "$_"
+        try {
+            &".\Prepare.ps1"
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    Invoke-Robocopy .\$_ .\_output\$_ -Mirror `
+        -ExcludeDirectories @('_*') -ExcludeFiles @('packages.config', 'Prepare.ps1') `
+        -NoFileList -NoDirectoryList -NoJobHeader -NoJobSummary
     New-NuGetPackage ".\_output\$_\Package.nuspec" ".\_output" -Version $version -NoPackageAnalysis -NoDefaultExcludes
 }
 
