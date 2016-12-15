@@ -31,7 +31,7 @@ Import-Module PowerUpNuGet
     Write-Host $_ -ForegroundColor White
     if (Test-Path "$_\Prepare.ps1") {
         if (Test-Path "$_\packages.config") {
-            Restore-NuGetPackages -Project "$_\packages.config" -Sources 'https://nuget.org/api/v2' -PackagesDirectory "$_\_packages"
+            Restore-NuGetPackages -Project "$_\packages.config" -PackagesDirectory "$_\_packages"
         }
     
         Push-Location "$_"

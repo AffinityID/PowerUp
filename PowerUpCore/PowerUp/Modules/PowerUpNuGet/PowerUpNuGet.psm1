@@ -1,9 +1,9 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-$nuget = "$PSScriptRoot\NuGet.exe"
-$nupkgmerge = "$PSScriptRoot\NupkgMerge.exe"
-Add-Type -Path "$PSScriptRoot\NuGet.Core.dll"
+$nuget = "$PSScriptRoot\NuGet.exe" # for now I cannot move this into tools as NuGet is needed for the initial restore
+$nupkgmerge = "$PSScriptRoot\tools\NupkgMerge.exe"
+Add-Type -Path "$PSScriptRoot\tools\NuGet.Core.dll"
 
 function Update-NuSpecFromFiles(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
