@@ -143,7 +143,7 @@ function Restore-NuGetPackages(
     [string] $packagesDirectory = $null
 ) {
     Import-Module PowerUpUtilities
-    $projectEscaped = $(if ($project -ne $null) { (Format-ExternalEscaped $project) + " " } else { $null })
+    $projectEscaped = $(if ($project) { (Format-ExternalEscaped $project) + " " } else { $null })
     $command = "restore " + $projectEscaped + (Format-ExternalArguments @{
         '-Source' = $(Join-NuGetSources $sources)
         '-PackagesDirectory' = $packagesDirectory
