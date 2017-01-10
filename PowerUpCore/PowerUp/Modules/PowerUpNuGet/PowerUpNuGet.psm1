@@ -71,7 +71,7 @@ function Get-NuGetPackage(
 
 function Test-NuGetPackage(
     [Parameter(Mandatory=$true)] [string] $id,
-    [Parameter(Mandatory=$true)] [NuGet.SemanticVersion] $version,
+    [Parameter(Mandatory=$true)] [string] $version,
     [Parameter(Mandatory=$true)] [string] $source
 ) {
     Add-Type -Path "$PSScriptRoot\tools\NuGet.Core.dll"
@@ -84,7 +84,7 @@ function New-NuGetPackage(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
     [Parameter(Mandatory=$true)][string] $outputDirectory,
     [string] $options,
-    [NuGet.SemanticVersion] $version,
+    [string] $version,
     [hashtable] $properties,
     [switch] $noPackageAnalysis,
     [switch] $noDefaultExcludes,
