@@ -36,4 +36,4 @@ Import-Module PowerUpNuGet
     New-NuGetPackage ".\_output\$_\Package.nuspec" ".\_output" -Version $version -NoPackageAnalysis -NoDefaultExcludes
 }
 
-#Publish-NuGetPackage ".\_output\*.nupkg" $server
+Publish-NuGetPackage ".\_output\*.nupkg" $server
