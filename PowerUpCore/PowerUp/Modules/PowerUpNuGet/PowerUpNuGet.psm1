@@ -3,7 +3,6 @@ $ErrorActionPreference = 'Stop'
 
 $nuget = "$PSScriptRoot\NuGet.exe" # for now I cannot move this into tools as NuGet is needed for the initial restore
 $nupkgmerge = "$PSScriptRoot\tools\NupkgMerge.exe"
-Add-Type -Path "$PSScriptRoot\tools\NuGet.Core.dll"
 
 function Update-NuSpecFromFiles(
     [Parameter(Mandatory=$true)][string] $nuspecPath,
@@ -66,14 +65,16 @@ function Get-NuGetPackage(
     # in future this could have alt paramset to get from a server
     [string] $path
 ) {
+    Add-Type -Path "$PSScriptRoot\tools\NuGet.Core.dll"
     return New-Object NuGet.OptimizedZipPackage((Resolve-Path $path))
 }
 
-function Test-NuGetPackage(    
+function Test-NuGetPackage(
     [Parameter(Mandatory=$true)] [string] $id,
     [Parameter(Mandatory=$true)] [NuGet.SemanticVersion] $version,
     [Parameter(Mandatory=$true)] [string] $source
 ) {
+    Add-Type -Path "$PSScriptRoot\tools\NuGet.Core.dll"
     # command-line is useless for this
     return [NuGet.PackageRepositoryFactory]::Default.CreateRepository($source).Exists($id, $version);
 }

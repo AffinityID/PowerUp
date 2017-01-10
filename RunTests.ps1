@@ -1,11 +1,12 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
+.\PrepareAll.ps1
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Get-ChildItem $scriptPath | % {
     $modulePath = Join-Path $_ 'PowerUp\Modules'
     if (Test-Path $modulePath) {
-        $modulePath = Resolve-Path $modulePath    
+        $modulePath = Resolve-Path $modulePath
         $env:PSModulePath += ";$modulePath"
         Write-Host "PSModulePath: added $modulePath."
     }

@@ -9,11 +9,12 @@ $ErrorActionPreference = 'Stop'
 
 $version = "0.$buildNumber"
 
+.\PrepareAll.ps1
+
 if (Test-Path $outputPath) {
     Remove-Item -Recurse $outputPath
 }
 
-$env:PSModulePath += ";$(Resolve-Path '.\PowerUpCore\PowerUp\Modules\')"
 Import-Module PowerUpFileSystem
 Import-Module PowerUpNuGet
 
@@ -29,19 +30,6 @@ Import-Module PowerUpNuGet
     'PowerUpSvn'
 ) | % {
     Write-Host $_ -ForegroundColor White
-    if (Test-Path "$_\Prepare.ps1") {
-        if (Test-Path "$_\packages.config") {
-            Restore-NuGetPackages -Project "$_\packages.config" -PackagesDirectory "$_\_packages"
-        }
-    
-        Push-Location "$_"
-        try {
-            &".\Prepare.ps1"
-        }
-        finally {
-            Pop-Location
-        }
-    }
     Invoke-Robocopy .\$_ .\_output\$_ -Mirror `
         -ExcludeDirectories @('_*') -ExcludeFiles @('packages.config', 'Prepare.ps1') `
         -NoFileList -NoDirectoryList -NoJobHeader -NoJobSummary
