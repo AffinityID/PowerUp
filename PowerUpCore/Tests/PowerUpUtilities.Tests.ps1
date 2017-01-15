@@ -50,6 +50,13 @@ Describe 'Format-ExternalEscaped' {
             $received | Should Be $initial
         }
     }
+
+    It "should escape list correctly" {
+        $initial = @('a b', 'c d')
+        $escaped = Format-ExternalEscaped $initial
+
+        $escaped | Should Be '"a b" "c d"'
+    }
 }
 
 Describe 'Get-RealException' {

@@ -193,12 +193,16 @@ function Format-ExternalArguments(
 }
 
 function Format-ExternalEscaped(
-    [string] $argument
+    [object] $argument
 ) {
     if ($argument -eq $null -or $argument -eq '') {
         return $argument
     }
-   
+
+    if ($argument -is [Collections.IEnumerable] -and $argument -isnot [string]) {
+        return ($argument.GetEnumerator() | % { Format-ExternalEscaped $_ }) -join ' '
+    }
+
     if ($argument -match '[`"]') {
         return "'$($argument.Replace('"', '\"').Replace("'", "''"))'"
         # " # this comment is just a highlighting fix for notepad 2
