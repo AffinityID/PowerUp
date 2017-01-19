@@ -66,7 +66,7 @@ function Test-ScheduledTask([Parameter(Mandatory=$true)] [string] $name) {
     
     Import-Module PowerUpUtilities
     
-    $allTasks = Invoke-External { schtasks /Query /fo csv /v } | ConvertFrom-Csv
+    $allTasks = Invoke-External "schtasks /Query /fo csv /v" | ConvertFrom-Csv
     $task = $allTasks | ? { $_.TaskName -eq "\$name" }
     return ($task -ne $null)
 }

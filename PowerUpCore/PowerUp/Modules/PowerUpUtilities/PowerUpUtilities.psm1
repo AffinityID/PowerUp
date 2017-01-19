@@ -129,38 +129,18 @@ function Use-Object(
     }
 }
 
-function Invoke-External {
-    [CmdletBinding()]
-    param ([parameter(Mandatory=$true, ValueFromRemainingArguments=$true)] $command)
-    
-    if ($command -is [Collections.IEnumerable] -and $command -isnot [string]) {
-        $command = @($command | % { $_ })
-        if (($command | measure).Count -eq 1) {
-            $command = $command[0]
-        }
-        elseif (!($command | ? { $_ -isnot [string] })) {
-            $command = $command -join ' '
-        }
-        else {
-            $commandsWithTypes = ($command | % { "[$($_.GetType())] $_" }) -join ', '
-            throw "Unsupported command list: ($commandsWithTypes)"
-        }
+function Invoke-External(
+    [Parameter(Mandatory=$true)] [string] $command,
+    [string[]] $secrets
+) {
+    $log = $command
+    foreach ($secret in $secrets) {
+        $log = $log.Replace($secret, '<secret>')
     }
-
-    Write-Host $command
-    if ($command -is [string]) {
-        $command += " 2>&1"
-        Invoke-Expression $command
-    }
-    elseif ($command -is [ScriptBlock]) {
-        $command.Invoke();
-    }
-    else {
-        throw "Unsupported command type: " + $command.GetType()
-    }
-    
+    Write-Host $log
+    Invoke-Expression $command
     if ($LastExitCode -ne 0) {
-        Write-Error "$command failed with exit code $LastExitCode"
+        Write-Error "$log failed with exit code $LastExitCode"
     }
 }
 
@@ -202,7 +182,7 @@ function Format-ExternalEscaped(
     if ($argument -is [Collections.IEnumerable] -and $argument -isnot [string]) {
         return ($argument.GetEnumerator() | % { Format-ExternalEscaped $_ }) -join ' '
     }
-
+   
     if ($argument -match '[`"]') {
         return "'$($argument.Replace('"', '\"').Replace("'", "''"))'"
         # " # this comment is just a highlighting fix for notepad 2

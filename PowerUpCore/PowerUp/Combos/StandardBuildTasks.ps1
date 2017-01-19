@@ -51,7 +51,7 @@ task RestorePackages {
 task Build {
     Ensure-Directory $IntermediateRoot
     $MSBuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=$Configuration") + $MSBuildArgs
-    Invoke-External msbuild $MSBuildArgsFull
+    Invoke-External "msbuild $($MSBuildArgsFull -join ' ')"
 }
 
 task Test {
