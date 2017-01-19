@@ -14,7 +14,7 @@ function Invoke-Ftpush(
     $passwordEnvVarName = "PWP_FTP_PASS_$([Guid]::NewGuid().ToString('N'))"
     try {    
         $password = $credentials.GetNetworkCredential().Password
-        New-Item -Name $passwordEnvVarName -value $password -ItemType Variable -Path env:
+        New-Item -Name $passwordEnvVarName -value $password -ItemType Variable -Path env: | Out-Null
         $command = "$ftpush " + (Format-ExternalArguments @{
             '--source'   = $sourcePath
             '--target'   = $ftpUrl
