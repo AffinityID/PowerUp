@@ -8,7 +8,8 @@ function Invoke-Ftpush(
     [Parameter(Mandatory=$true)] [Uri] $ftpUrl,
     [Parameter(Mandatory=$true)] [PSCredential] $credentials,
     [string[]] $excludes,
-    [switch] $active
+    [switch] $active,
+    [switch] $interimRetryLogin
 ) {
     Import-Module PowerUpUtilities
     $passwordEnvVarName = "PWP_FTP_PASS_$([Guid]::NewGuid().ToString('N'))"
@@ -22,6 +23,7 @@ function Invoke-Ftpush(
             '--passvar'  = $passwordEnvVarName
             '--exclude'  = $excludes
             '--active'   = $active
+            '--interim-retry-login' = $interimRetryLogin
         } -EscapeAll)
         Invoke-External $command
     }
