@@ -3,9 +3,9 @@ $ErrorActionPreference = 'Stop'
 
 function Invoke-ComboRemotableTask([Parameter(Mandatory=$true)] [string] $task, [Hashtable] $options) {
     Import-Module PowerUpUtilities
-    Merge-Defaults $options @{ remote = $false };
+    Merge-Defaults $options @{ remote = $false }
     if ($options['getServerSettings']) {
-        Write-Warning "Invoke-ComboRemotableTask: Option 'getServerSettings' is obsolete and should not be used."
+        Write-Error "Invoke-ComboRemotableTask: Option 'getServerSettings' is obsolete and should not be used."
     }
 
     if (!$options.remote) {
@@ -17,10 +17,13 @@ function Invoke-ComboRemotableTask([Parameter(Mandatory=$true)] [string] $task, 
     Write-Host "Task $task will be executed on $($options.servers)."
     Import-Module PowerUpRemote
     $currentPath = Get-Location
-    Invoke-RemoteTasks `
-        -operation ${powerup.operation} `
-        -tasks $task `
-        -serverNames $options.servers `
-        -profile ${powerup.profile} `
-        -packageName $options.workingSubFolder
+    foreach ($serverName in $options.servers) {
+        Invoke-RemoteTasks `
+            -ServerName $serverName `
+            -ShareName $options.share `
+            -PackageName $options.workingSubFolder `
+            -Operation ${powerup.operation} `
+            -Tasks $task `
+            -Profile ${powerup.profile} `
+    }
 }

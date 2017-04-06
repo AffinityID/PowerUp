@@ -129,10 +129,13 @@ function Use-Object(
     }
 }
 
-function Invoke-External(
-    [Parameter(Mandatory=$true)] [string] $command,
-    [string[]] $secrets
-) {
+function Invoke-External {
+    [CmdletBinding()] # allows -ErrorAction
+    param (
+        [Parameter(Mandatory=$true)] [string] $command,
+        [string[]] $secrets
+    )
+
     $log = $command
     foreach ($secret in $secrets) {
         $log = $log.Replace($secret, '<secret>')

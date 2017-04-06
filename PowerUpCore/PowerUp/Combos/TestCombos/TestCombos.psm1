@@ -6,8 +6,23 @@ function Invoke-ComboTests([Parameter(Mandatory=$true)] [hashtable] $options) {
     Import-Module PowerUpFileSystem
     Write-Host "Test options: $($options | Out-String)"
 
+    Ensure-Directory _testresults
+    $testResultsRoot = Resolve-Path _testresults
+
     $testErrors = @()
-            
+
+    $dotnet = $options['dotnet']
+    if ($dotnet -ne $null) {
+        Get-MatchedPaths -Includes $dotnet.paths | % {
+            $trxPath = "$testResultsRoot\$([IO.Path]::GetFileNameWithoutExtension($_.FullPath)).trx"
+            $arguments = "$(Format-ExternalEscaped $_.FullPath) --configuration $($dotnet.configuration) --no-build --logger $(Format-ExternalEscaped "trx;LogFileName=$trxPath")"
+            Invoke-External "dotnet test $arguments" -ErrorAction Continue -ErrorVariable testError
+            if ($testError) {
+                $testErrors += $testError
+            }
+        }
+    }
+
     $nunit = $options['nunit']
     if ($nunit -ne $null) {
         if (!(Get-Module -ListAvailable -Name PowerUpNUnit)) {

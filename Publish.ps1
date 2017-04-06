@@ -22,6 +22,7 @@ Import-Module PowerUpNuGet
     'PowerUpCore',
     'PowerUpFluentMigrator',
     'PowerUpFtp',
+    'PowerUpIIS',
     'PowerUpJsonFallback',
     'PowerUpNUnit',
     'PowerUpPester',

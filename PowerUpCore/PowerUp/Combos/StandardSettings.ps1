@@ -19,7 +19,7 @@
 ({
     Import-Module PowerUpUtilities
     Set-DynamicVariable 'serverSettingsScriptBlock' -Scope Global -Options Constant -Get {
-        Write-Warning "Variable 'serverSettingsScriptBlock' is obsolete and should not be used (note that getServerSettings option is also obsolete, so there is no use case for it anyway)."
+        Write-Error "Variable 'serverSettingsScriptBlock' is obsolete and should not be used (note that getServerSettings option is also obsolete, so there is no use case for it anyway)."
         return {}
     }
 }).Invoke()

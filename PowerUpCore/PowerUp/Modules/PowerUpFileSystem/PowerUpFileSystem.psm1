@@ -169,7 +169,7 @@ Add-Type -TypeDefinition @"
         public string RelativePath { get; private set; }
         public string FullPath { get; private set; }
     }
-"@
+"@ -Language CSharpVersion3
 function Get-MatchedPaths(
     [string] $path,
     [string[]] $includes,

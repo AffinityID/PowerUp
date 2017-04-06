@@ -3,12 +3,16 @@ Import-Module PowerUpUtilities
 Add-Type -TypeDefinition "public enum WebsiteCopyMode { Default, NoMirror, NoCopy }"
 
 function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $options) {
+    if (!(Get-Module -ListAvailable -Name PowerUpIIS)) {
+        Write-Error "PowerUpIIS module is not found: make sure PowerUp.IIS package is installed."
+    }
+
     Import-Module PowerUpFileSystem
-    Import-Module PowerUpWeb
+    Import-Module PowerUpIIS
     Import-Module PowerUpWebRequest
-    
+
     Set-StrictMode -Version 2
-        
+
     # apply defaults
     Merge-Defaults $options @{
         stopwebsitefirst = $true;
@@ -34,8 +38,8 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
             executionmode = "Integrated"
             dotnetversion = "v4.0"
             name = { $options.websitename }
-            username = $null
             identity = $null
+            credentials = $null
             idletimeout = $null
         };
         bindings = @(@{});
@@ -90,7 +94,7 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
                 name = { Write-Error "AppPool name must be specified for directory $($_.destinationfolder)."; }
                 executionmode = "Integrated"
                 dotnetversion = "v4.0"
-                username = $null
+                credentials = $null
                 identity = $null
             }
         }
@@ -100,7 +104,8 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     
     if($options.stopwebsitefirst)
     {
-        stop-apppoolandsite $options.apppool.name $options.websitename
+        Stop-IISAppPool $options.apppool.name 
+        Stop-IISWebSite $options.websitename
     }
     
     if ($options.backup.enabled)
@@ -140,8 +145,12 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     
     $setAppPoolIdentity = {
         param ($apppool)
-        if ($apppool.username) {
-            set-apppoolidentitytouser $apppool.name $apppool.username $apppool.password
+        if ($apppool.ContainsKey("username")) {
+            Write-Error "apppool.username is obsolete, use apppool.credentials instead."
+        }
+        
+        if ($apppool.credentials) {
+            Set-IISAppPoolCredentials $apppool.name $apppool.credentials
         }
         if ($apppool.identity -eq "NT AUTHORITY\NETWORK SERVICE") {
             set-apppoolidentityType $apppool.name 2 #2 = NetworkService
@@ -154,7 +163,7 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     }
     
     if ($options.apppool.idletimeout -ne $null) {
-        Set-AppPoolIdleTimeout $options.apppool.name $options.apppool.idletimeout
+        Set-IISAppPoolIdleTimeout $options.apppool.name $options.apppool.idletimeout
     }
 
     $firstBinding = $options.bindings[0]
@@ -163,14 +172,14 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     foreach($binding in $options.bindings) {
         if($binding.protocol -eq "https") {
             if ($binding.useselfsignedcert) {
-                Write-Host "Set-SelfSignedSslcCertificate $($binding.certname)"
+                Write-Host "Set-SelfSignedSslCertificate $($binding.certname)"
                 Set-SelfSignedSslCertificate $binding.certname
             }
 
             $sslHost = $(if ($binding.usesni) { $binding.url } else { '*' })
-            Set-SslBinding $binding.certname -IP $binding.ip -Port $binding.port -Host $sslHost
+            Set-IISSslBinding $binding.certname -IP $binding.ip -Port $binding.port -Host $sslHost
         }
-        Set-WebSiteBinding `
+        Set-IISWebSiteBinding `
             -WebSiteName $options.websitename `
             -HostHeader $binding.url `
             -Protocol $binding.protocol `
@@ -230,7 +239,8 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
 
     if($options.startwebsiteafter)
     {
-        start-apppoolandsite $options.apppool.name $options.websitename
+        Start-IISAppPool $options.apppool.name 
+        Start-IISWebSite $options.websitename
     }
 
     if($options.tryrequestwebsite)

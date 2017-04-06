@@ -142,7 +142,7 @@ function Test-Setting(
     }
 
     $value = (Get-Variable -Name $name).Value
-    if ([string]::IsNullOrWhiteSpace($value)) {
+    if ([string]::IsNullOrEmpty($value)) {
         return $false;
     }
     
@@ -165,19 +165,19 @@ function Get-Setting(
     if ($secure) {
         $parts = $value -split ':'
         if ($parts.Length -ne 3) {
-            throw "Secure setting '$name' must be in format machine:username:encrypted."
+            throw "Secure setting '$name' must be in format AA:BB:CC, where AA is RSA key container name, BB is secure string key encrypted with RSA, and CC is a secure string."
         }
 
-        if ($parts[0] -ne [Environment]::MachineName) {
-            throw "Secure setting '$name' can be decrypted on $([Environment]::MachineName) only."
-        }
+        $csp = New-Object Security.Cryptography.CspParameters
+        $csp.KeyContainerName = $parts[0]
+        $csp.KeyNumber = 1    # Exchange
+        $csp.ProviderType = 1 # PROV_RSA_FULL
+        $csp.Flags = [Security.Cryptography.CspProviderFlags]::UseMachineKeyStore -bor [Security.Cryptography.CspProviderFlags]::UseExistingKey
 
-        $user = "$([Environment]::UserDomainName)\$([Environment]::UserName)"
-        if ($parts[1] -ne $user) {
-            throw "Secure setting '$name' can be decrypted by $user only."
-        }
+        $rsa = New-Object Security.Cryptography.RSACryptoServiceProvider(4096, $csp)
+        $key = $rsa.Decrypt([Convert]::FromBase64String($parts[1]), $true)
 
-        return ConvertTo-SecureString $parts[2]
+        return ConvertTo-SecureString $parts[2] -Key $key
     }
 
     return $value

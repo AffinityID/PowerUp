@@ -250,7 +250,7 @@ function EnsureSelfSignedSslCertificate($certName)
 	}
 }
 
-function Set-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
+function Set-IISWebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
     if ($hostHeader -eq "" -or $hostHeader -eq "*") {
         #temporary special case to handle bindings with blank host header.
         try {
@@ -268,7 +268,7 @@ function Set-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*"
     
 }
 
-function New-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
+function New-IISWebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*", $port="80", [switch] [boolean] $useSni = $false) {
     $sslFlags = $(if ($useSni) { 1 } else { 0 })
     Write-Host "Binding website $websiteName to host header $hostHeader with IP $ip, port $port, flags $sslFlags over $protocol"
     if ($sslFlags -gt 0) {
@@ -280,13 +280,13 @@ function New-WebSiteBinding($websiteName, $hostHeader, $protocol="http", $ip="*"
     }
 }
 
-function New-WebSiteBindingNonHttp($websiteName, $protocol, $bindingInformation)
+function New-IISWebSiteBindingNonHttp($websiteName, $protocol, $bindingInformation)
 {
 	echo "Binding website $websiteName to binding information $bindingInformation over $protocol"
 	New-ItemProperty $sitesPath\$websiteName –name bindings –value @{protocol="$protocol";bindingInformation="$bindingInformation"}
 }
 
-function Set-SslBinding(
+function Set-IISSslBinding(
     [Parameter(Mandatory=$true)] [string] $certificateName,
     [Parameter(Mandatory=$true)] [string] $ip,
     [Parameter(Mandatory=$true)] [string] $port,
@@ -371,48 +371,33 @@ function New-WebApplication(
         -Force:$force
 }
 
-function Stop-AppPool($name) {
+function Stop-IISAppPool($name) {
     StopWebItemInternal AppPool $appPoolsPath $name
 }
 
-# TODO rename to something with WebSite, though Stop-WebSite is taken by IIS snap-in
-function Stop-Site([Parameter(Mandatory=$true)] [string] $siteName) {
+function Stop-IISWebSite([Parameter(Mandatory=$true)] [string] $siteName) {
     StopWebItemInternal Site $sitesPath $siteName
 }
 
-function Stop-AppPoolAndSite(
-    [Parameter(Mandatory=$true)] [string] $appPoolName,
-    [Parameter(Mandatory=$true)] [string] $siteName
-) {
-    Stop-AppPool $appPoolName
-    Stop-Site $siteName
-}
-
-function Start-AppPool([Parameter(Mandatory=$true)] [string] $name) {
+function Start-IISAppPool([Parameter(Mandatory=$true)] [string] $name) {
     StartWebItemInternal AppPool $appPoolsPath $name
 }
 
-# TODO rename to something with WebSite, though Start-WebSite is taken by IIS snapin
-function Start-Site ([Parameter(Mandatory=$true)] [string] $name) {
+function Start-IISWebSite ([Parameter(Mandatory=$true)] [string] $name) {
     StartWebItemInternal Site $sitesPath $name
 }
 
-function Start-AppPoolAndSite(
+function Set-IISAppPoolCredentials(
     [Parameter(Mandatory=$true)] [string] $appPoolName,
-    [Parameter(Mandatory=$true)] [string] $siteName
-) {
-    Start-Site $siteName
-    Start-AppPool $appPoolName
-}
-
-function set-apppoolidentitytouser($appPoolName, $userName, $password)
+    [Parameter(Mandatory=$true)] [Management.Automation.PSCredential] $credentials
+)
 {
-	write-host "Setting $appPoolName to be run under the identity $userName"
-	$appPool = Get-Item $appPoolsPath\$appPoolName
-	$appPool.processModel.username =  $userName
-	$appPool.processModel.password = $password
-	$appPool.processModel.identityType = 3
-	$appPool | set-item
+    Write-Host "Setting $appPoolName to be run under the identity $($credentials.UserName)"
+    $appPool = Get-Item $appPoolsPath\$appPoolName
+    $appPool.processModel.userName = $credentials.UserName
+    $appPool.processModel.password = $credentials.GetNetworkCredential().Password
+    $appPool.processModel.identityType = 'SpecificUser'
+    $appPool | Set-Item
 }
 
 function set-apppoolidentityType($appPoolName, [int]$identityType)
@@ -449,7 +434,7 @@ Add-Type -TypeDefinition "public enum WebSiteAuthenticationType {
     IisClientCertificateMapping,
     Windows
 }"
-function Set-WebSiteAuthentication(
+function Set-IISWebSiteAuthentication(
     [Parameter(Mandatory=$true)] [string] $siteName,
     [Parameter(Mandatory=$true)] [WebSiteAuthenticationType] $authenticationType,
     [Parameter(Mandatory=$true)] [Hashtable] $properties
@@ -476,39 +461,39 @@ function End-WebChangeTransaction()
 	return End-WebCommitDelay
 }
 
-function Set-AppPoolIdleTimeout(
-	[Parameter(Mandatory=$true)] [string] $appPoolName, 
-	[Parameter(Mandatory=$true)] [int] $mins)
+function Set-IISAppPoolIdleTimeout(
+    [Parameter(Mandatory=$true)] [string] $appPoolName, 
+    [Parameter(Mandatory=$true)] [int] $minutes
+)
 {
-	write-host "Setting $appPoolName Idle Time-out to $mins minutes"
-	$appPool = Get-Item $appPoolsPath\$appPoolName
-	$appPool.processModel.idleTimeout = [TimeSpan]::FromMinutes($mins)
-	$appPool | Set-Item
+    Write-Host "Setting $appPoolName idle timeout to $minutes minutes"
+    appPool = Get-Item $appPoolsPath\$appPoolName
+    $appPool.processModel.idleTimeout = [TimeSpan]::FromMinutes($mins)
+    $appPool | Set-Item
 }
 export-modulemember -function set-webapppool32bitcompatibility,
-                               set-apppoolidentitytouser,
+                               Set-IISAppPoolCredentials,
                                set-apppoolidentityType,
                                set-apppoolstartMode,
                                new-webapplication,
                                new-virtualdirectory,
                                Register-VirtualDirectory,
-                               Start-AppPoolAndSite,
-                               Start-AppPool,
-                               Start-Site,
-                               Stop-AppPool,
-                               Stop-AppPoolAndSite,
+                               Start-IISAppPool,
+                               Start-IISWebSite,
+                               Stop-IISAppPool,
+                               Stop-IISWebSite,
                                set-website,
                                uninstall-website,
                                set-webapppool,
                                uninstall-webapppool,
-                               Set-WebSiteBinding,
-                               New-WebSiteBinding,
-                               New-WebSiteBindingNonHttp,
+                               Set-IISWebSiteBinding,
+                               New-IISWebSiteBinding,
+                               New-IISWebSiteBindingNonHttp,
                                set-SelfSignedSslCertificate,
-                               Set-SslBinding,
+                               Set-IISSslBinding,
                                set-property,
                                set-webproperty,
                                Begin-WebChangeTransaction,
                                End-WebChangeTransaction,
-                               Set-AppPoolIdleTimeout,
-                               Set-WebSiteAuthentication
+                               Set-IISAppPoolIdleTimeout,
+                               Set-IISWebSiteAuthentication
