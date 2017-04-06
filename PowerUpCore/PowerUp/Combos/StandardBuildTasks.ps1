@@ -47,6 +47,9 @@ task Clean {
 
 task RestorePackages {
     if (!$UseDotnetExe) {
+        if (!(Get-Module -ListAvailable -Name PowerUpNuGet)) {
+            Write-Error "PowerUpNuGet module is not found: make sure PowerUp.NuGet package is installed."
+        }
         Import-Module PowerUpNuGet
         Restore-NuGetPackages -Sources $NuGetServers
     }

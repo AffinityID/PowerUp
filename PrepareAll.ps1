@@ -2,7 +2,7 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$env:PSModulePath += ";$(Resolve-Path '.\PowerUpCore\PowerUp\Modules\')"
+$env:PSModulePath += ";$(Resolve-Path '.\PowerUpCore\PowerUp\Modules\');$(Resolve-Path '.\PowerUpNuGet\PowerUp\Modules\')"
 Import-Module PowerUpNuGet
 
 Write-Host "Preparing..." -ForegroundColor White
