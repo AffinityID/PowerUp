@@ -57,41 +57,37 @@ function Invoke-Robocopy(
     [switch] $noFileList,
     [switch] $noDirectoryList,
     [switch] $noJobHeader,
-    [switch] $noJobSummary
+    [switch] $noJobSummary,
+    [int] $retryCount = 10
 ) {
     Import-Module PowerUpUtilities
 
-    if ($options.length > 0)
+    if ($options.length -gt 0) {
         $options += ' '
-
+    }
     $options += (Format-ExternalArguments @{
         '/e'     = $copyDirectoriesIncludingEmpty
         '/s'     = $copyDirectories
         '/purge' = $purge
         '/mir'   = $mirror
-        
+
         '/xd'    = $(if ($excludeDirectories) { ($excludeDirectories | % { "`"$_`"" }) -Join ' ' } else { $null })
         '/xf'    = $(if ($excludeFiles) { ($excludeFiles | % { "`"$_`"" }) -Join ' ' } else { $null })
-        
+
         '/xx'    = $excludeExtra
         '/xc'    = $excludeChanged
         '/xn'    = $excludeNewer
         '/xo'    = $excludeOlder
-        
+
         '/np'    = $noProgress
         '/ns'    = $noFileSize
         '/nfl'   = $noFileList
         '/ndl'   = $noDirectoryList
         '/njh'   = $noJobHeader
         '/njs'   = $noJobSummary
-    })
 
-    if ($options.length > 0)
-        $options += ' '
-        
-    $options += (Format-ExternalArguments (@{
-        '/R'     = 10    # Set default number of retries
-    }) ":")
+        '/R:'    = $retryCount
+    })
 
     $filesString = ($files | % { "`"$_`"" }) -Join ' '
     $command = "&'$PSScriptRoot\robocopy.exe' `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"

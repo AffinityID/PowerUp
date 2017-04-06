@@ -149,7 +149,6 @@ function Invoke-External {
 
 function Format-ExternalArguments(
     [Parameter(Mandatory=$true)] [hashtable] $arguments,
-    [string] $separator = " ",
     [switch] $escapeAll = $false
 ) {
     $parts = $arguments.GetEnumerator() | 
@@ -159,17 +158,19 @@ function Format-ExternalArguments(
                     ($value -ne '') -and
                     ($value -isnot [switch] -or $value)
         } |
-        % { 
-            $argument = $_.Key
+        % {
+            $name = $_.Key
             $value = $_.Value
+            $argument = $name
             if ($value -isnot [switch]) {
                 if ($escapeAll) {
                     $value = Format-ExternalEscaped $value
                 }
-                
+
+                $separator = $(if ($name -notmatch '[:=]$') { ' ' } else { '' })
                 $argument += $separator + $value
             }
-            
+
             return $argument
         }
         
