@@ -1,1 +1,1 @@
-@_powerup\Run %1
+@_powerup\Run %*

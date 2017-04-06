@@ -9,8 +9,8 @@ task Deploy {
     Invoke-ComboRemotableTask DeployWeb @{
         remote = (Test-Setting execute.remotely -IsTrue)
         servers = ${web.server}
+        share = ${web.server.share}
         workingSubFolder = ${project.name}
-        getServerSettings = $serverSettingsScriptBlock
     }
 }
 
@@ -24,12 +24,6 @@ task DeployWeb {
         bindings = @(@{
             url = ${website.name}
         });
-    }
-    if (Test-Setting website.apppool.username) {
-        $options.apppool = @{
-            username = ${website.apppool.username}
-            password = ${website.apppool.password}
-        };
     }
     
     Invoke-ComboStandardWebsite $options
