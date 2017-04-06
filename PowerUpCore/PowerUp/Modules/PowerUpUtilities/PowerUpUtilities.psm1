@@ -158,17 +158,19 @@ function Format-ExternalArguments(
                     ($value -ne '') -and
                     ($value -isnot [switch] -or $value)
         } |
-        % { 
-            $argument = $_.Key
+        % {
+            $name = $_.Key
             $value = $_.Value
+            $argument = $name
             if ($value -isnot [switch]) {
                 if ($escapeAll) {
                     $value = Format-ExternalEscaped $value
                 }
-                
-                $argument += " " + $value
+
+                $separator = $(if ($name -notmatch '[:=]$') { ' ' } else { '' })
+                $argument += $separator + $value
             }
-            
+
             return $argument
         }
         

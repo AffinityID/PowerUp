@@ -57,30 +57,36 @@ function Invoke-Robocopy(
     [switch] $noFileList,
     [switch] $noDirectoryList,
     [switch] $noJobHeader,
-    [switch] $noJobSummary
+    [switch] $noJobSummary,
+    [int] $retryCount = 10
 ) {
     Import-Module PowerUpUtilities
 
+    if ($options.length -gt 0) {
+        $options += ' '
+    }
     $options += (Format-ExternalArguments @{
         '/e'     = $copyDirectoriesIncludingEmpty
         '/s'     = $copyDirectories
         '/purge' = $purge
         '/mir'   = $mirror
-        
+
         '/xd'    = $(if ($excludeDirectories) { ($excludeDirectories | % { "`"$_`"" }) -Join ' ' } else { $null })
         '/xf'    = $(if ($excludeFiles) { ($excludeFiles | % { "`"$_`"" }) -Join ' ' } else { $null })
-        
+
         '/xx'    = $excludeExtra
         '/xc'    = $excludeChanged
         '/xn'    = $excludeNewer
         '/xo'    = $excludeOlder
-        
+
         '/np'    = $noProgress
         '/ns'    = $noFileSize
         '/nfl'   = $noFileList
         '/ndl'   = $noDirectoryList
         '/njh'   = $noJobHeader
         '/njs'   = $noJobSummary
+
+        '/R:'    = $retryCount
     })
 
     $filesString = ($files | % { "`"$_`"" }) -Join ' '

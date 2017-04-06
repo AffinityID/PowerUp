@@ -59,6 +59,28 @@ Describe 'Format-ExternalEscaped' {
     }
 }
 
+Describe 'Format-ExternalArguments' {
+    It "should format standard argument as '/key value'" {
+        $result = Format-ExternalArguments @{ '/key' = 'value' }
+        $result | Should Be '/key value'
+    }
+    
+    It "should format argument ending in ':' as '/key:value'" {
+        $result = Format-ExternalArguments @{ '/key:' = 'value' }
+        $result | Should Be '/key:value'
+    }
+
+    It "should format `$true  switch argument as '/key' only (no value)" {
+        $result = Format-ExternalArguments @{ '/key' = [switch]$true }
+        $result | Should Be '/key'
+    }
+    
+    It "should format `$false switch argument as empty" {
+        $result = Format-ExternalArguments @{ '/key' = [switch]$false }
+        $result | Should Be ''
+    }
+}
+
 Describe 'Get-RealException' {
     It 'should unwrap non-existent file property set exception to IOException' {
         $real = $null
