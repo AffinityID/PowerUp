@@ -1,91 +1,84 @@
-function Invoke-Combo-StandardWindowsService($options)
-{
-	import-module powerupfilesystem
-	import-module powerupwindowsservice
-				
-	if (!$options.destinationfolder)
-	{
-		$options.destinationfolder = $options.servicename
-	}
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2
 
-	if (!$options.sourcefolder)
-	{
-		$options.sourcefolder = $options.destinationfolder
-	}
-	
-	if (!$options.fulldestinationpath)
-	{
-		$options.fulldestinationpath = "$($options.serviceroot)\$($options.destinationfolder)"
-	}
+Add-Type -TypeDefinition "public enum WindowsServiceCopyMode { Default, NoMirror, NoCopy }"
 
-	if (!$options.fullsourcepath)
-	{
-		$options.fullsourcepath = "$(get-location)\$($options.sourcefolder)"
-	}
-	
-	if (!$options.exename)
-	{
-		$options.exename = "$($options.servicename).exe"
-	}
-		
-	Uninstall-Service $options.servicename
+function Invoke-ComboStandardWindowsService($options) {
+    Import-Module powerupfilesystem
+    Import-Module powerupwindowsservice
+    Import-Module PowerUpUtilities
 
-	if($options.copywithoutmirror)
-	{
-		copy-directory $options.fullsourcepath $options.fulldestinationpath
-	}
-	else
-	{
-		copy-mirroreddirectory $options.fullsourcepath $options.fulldestinationpath
-	}
-	
-	Install-Service $options.servicename (Join-Path $options.fulldestinationpath $options.exename)
-	
-	if ($options.serviceaccountusername)
-	{
-		Set-ServiceCredentials $options.servicename $options.serviceaccountusername $options.serviceaccountpassword
-	}
-	
-	if ($options.failureoptions.enablerecovery)
-	{
-		if (!$options.failureoptions.resetfailurecountafterseconds)
-		{
-			$options.failureoptions.resetfailurecountafterseconds = 86400
-		}
-		
-		if (!$options.failureoptions.firstactiondelayseconds)
-		{
-			$options.failureoptions.firstactiondelayseconds = 0
-		}
+    Merge-Defaults $options @{
+        destinationfolder = { $options.servicename }
+        sourcefolder = { $options.destinationfolder }
+        fulldestinationpath = { Join-Path $options.serviceroot $options.destinationfolder }
+        fullsourcepath = { Join-Path (Get-Location) $options.sourcefolder }
+        exename = { "$($options.servicename).exe" }
+        copymode = [WindowsServiceCopyMode]::Default
+        beforecopy = { {} }
+        aftercopy = { {} }
+        failureoptions = @{
+            enablerecovery = $false
+            resetfailurecountafterseconds = 86400
+            firstactiondelayseconds = 0
+            secondaction = $null
+            secondactiondelayseconds = 0
+            subsequentaction = $null
+            subsequentactiondelayseconds = 0
+        }
+        donotstartimmediately = $false
+        '[ordered]' = @('destinationfolder','sourcefolder','fulldestinationpath','fullsourcepath')
+    }
+    
+    if ($options.ContainsKey("copywithoutmirror")) {
+        Write-Error "Option 'copywithoutmirror' is obsolete, use 'copymode' (Default/NoMirror) instead."
+    }
+    
+    if ($options.ContainsKey("serviceaccountusername")) {
+        Write-Error "Option 'serviceaccountusername' is obsolete, use 'credentials' (PSCredential) instead."
+    }
+    
+    Write-Host "Service options: $($options | Out-String)"
 
-		if (!$options.failureoptions.secondactiondelayseconds)
-		{
-			$options.failureoptions.secondactiondelayseconds = 0
-		}
-		
-		if (!$options.failureoptions.subsequentactiondelayseconds)
-		{
-			$options.failureoptions.subsequentactiondelayseconds = 0
-		}
-		Set-ServiceFailureOptions $options.servicename $options.failureoptions.resetfailurecountafterseconds $options.failureoptions.firstaction $options.failureoptions.firstactiondelayseconds $options.failureoptions.secondaction $options.failureoptions.secondactiondelayseconds $options.failureoptions.subsequentaction $options.failureoptions.subsequentactiondelayseconds
-	}
+    Uninstall-Service $options.servicename
 
-    if ($options.donotstartimmediately)
-    {
+    &($options.beforecopy)
+
+    # same as website, worth consolidating at some point
+    $copymode = [WindowsServiceCopyMode]$options.copymode
+    switch ($copymode) {
+        'Default'  { copy-mirroreddirectory $options.fullsourcepath $options.fulldestinationpath; break }
+        'NoMirror' { copy-directory $options.fullsourcepath $options.fulldestinationpath; break }
+        'NoCopy'   { Write-Host "Copying is not required for this service (copymode = NoCopy)"; break }
+        default    { Throw "Copy mode not recognized: $copymode." }
+    }
+
+    &($options.aftercopy)
+
+    Install-Service $options.servicename (Join-Path $options.fulldestinationpath $options.exename)
+    if ($options.credentials) {        
+        Set-ServiceCredentials $options.servicename $options.credentials
+    }
+
+    if ($options.failureoptions.enablerecovery) {
+        $recovery = $options.failureoptions
+        Set-ServiceFailureOptions $options.servicename $recovery.resetfailurecountafterseconds $recovery.firstaction $recovery.firstactiondelayseconds $recovery.secondaction $recovery.secondactiondelayseconds $recovery.subsequentaction $recovery.subsequentactiondelayseconds
+    }
+
+    if ($options.donotstartimmediately) {
+        Write-Host "Service will not be started (donotstartimmediately = true)."
         return;
     }
 
-    try
-    {
+    try {
         Start-Service $options.servicename
     }
-    catch
-    {
+    catch {
         Write-Error "Failed to start service $($options.servicename): $_" -ErrorAction Continue
         $logs = (Get-EventLog Application -Source $options.servicename -ErrorAction SilentlyContinue | Select-Object -First 5)
         if ($logs) {
             Write-Host "Recent Application event logs for $($options.servicename):"
-            $logs | % {                
+            $logs | % {
                 Write-Host "$($_.TimeGenerated) $($_.EntryType)" -ForegroundColor DarkMagenta
                 Write-Host $_.Message
                 Write-Host ""

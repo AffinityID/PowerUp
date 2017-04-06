@@ -2,26 +2,24 @@ Import-Module PowerUpUtilities
 
 Add-Type -TypeDefinition "public enum WebsiteCopyMode { Default, NoMirror, NoCopy }"
 
-function Invoke-Combo-StandardWebsite($options) {
-    Write-Warning "Invoke-Combo-StandardWebsite is obsolete/non-standard name, use Invoke-ComboStandardWebsite instead."
-    Invoke-ComboStandardWebsite $options
-}
+function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $options) {
+    if (!(Get-Module -ListAvailable -Name PowerUpIIS)) {
+        Write-Error "PowerUpIIS module is not found: make sure PowerUp.IIS package is installed."
+    }
 
-function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $options)
-{
     Import-Module PowerUpFileSystem
-    Import-Module PowerUpWeb
+    Import-Module PowerUpIIS
     Import-Module PowerUpWebRequest
-    
+
     Set-StrictMode -Version 2
-        
+
     # apply defaults
     Merge-Defaults $options @{
         stopwebsitefirst = $true;
         recreatewebsite = $true;
         port = 80;
         copymode = {
-            if ($options.ContainsKey("copywithoutmirror")) {                
+            if ($options.ContainsKey("copywithoutmirror")) {
                 Write-Warning "Option 'copywithoutmirror' is obsolete, use 'copymode' (Default/NoMirror) instead."
                 if ($options.copywithoutmirror) {
                     return [WebsiteCopyMode]::NoMirror
@@ -37,22 +35,23 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
         fullsourcepath = { "$(get-location)\$($options.sourcefolder)" };
         aftercopy = { {} };
         apppool = @{
-            executionmode = "Integrated";
-            dotnetversion = "v4.0";
-            name = { $options.websitename };
-            username = $null;
+            executionmode = "Integrated"
+            dotnetversion = "v4.0"
+            name = { $options.websitename }
             identity = $null
+            credentials = $null
+            idletimeout = $null
         };
         bindings = @(@{});
         virtualdirectories = @();
         appfabricapplications = @();
         backup = @{
-          enabled = $false;
-          location = { "$($options.sourcefolder)\backup" };
-          media = $false;
-          umbraco = $false;
-          code = { Write-Warning "No backup code found"; @() }
+            enabled = $false
+            location = { "$($options.sourcefolder)\backup" }
+            media = $false
+            code = { Write-Warning "No backup code found"; @() }
         };
+        beforestart = { {} };
         startwebsiteafter = $true;
         tryrequestwebsite = $false;
         '[ordered]' = @('destinationfolder','sourcefolder','fulldestinationpath','fullsourcepath','backup')
@@ -60,30 +59,53 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     
     $options.bindings | % {
         Merge-Defaults $_ @{
-            protocol = "http";
-            ip = "*";
-            port = 80;
-            useselfsignedcert = $true;
+            protocol = "http"
+            ip = "*"
+            port = { if ($_.protocol -eq 'https') { 443 } else { 80 } }
+            useselfsignedcert = $false
             certname = { $options.websitename }
+            usesni = $false
+            '[ordered]' = @('protocol','port')
         }
     }
     
     $options.virtualdirectories | % {
        Merge-Defaults $_ @{
-            fulldestinationpath = { "$($options.webroot)\$($_.destinationfolder)" };
-            sourcefolder = $null;
-            fullsourcepath = { if ($_.sourcefolder) { "$(get-location)\$($_.sourcefolder)" } else { $null } };
-            isapplication = $false;
-            useapppool = $false;
-            '[ordered]' = @('sourcefolder','fullsourcepath')
+            destinationfolder = { "$($options.destinationfolder)\$($_.directoryname)" }
+            fulldestinationpath = { "$($options.webroot)\$($_.destinationfolder)" }
+            sourcefolder = $null
+            fullsourcepath = { if ($_.sourcefolder) { "$(get-location)\$($_.sourcefolder)" } else { $null } }
+            isapplication = $false
+            useapppoolidentity = {
+                if ($options.ContainsKey("useapppool")) {
+                    Write-Warning "Option 'useapppool' is obsolete, use 'useapppoolidentity' instead."
+                    return $options.useapppool
+                }
+                
+                return $false
+            }
+            apppool = $null
+            stopappoolfirst = $false
+            '[ordered]' = @('sourcefolder','fullsourcepath','destinationfolder','fulldestinationpath')
+        }
+        
+        if ($_['apppool'] -ne $null) {
+            Merge-Defaults $_.apppool @{
+                name = { Write-Error "AppPool name must be specified for directory $($_.destinationfolder)."; }
+                executionmode = "Integrated"
+                dotnetversion = "v4.0"
+                credentials = $null
+                identity = $null
+            }
         }
     }
         
     Write-Host "Website options: $($options | Out-String)"
-        
+    
     if($options.stopwebsitefirst)
     {
-        stop-apppoolandsite $options.apppool.name $options.websitename
+        Stop-IISAppPool $options.apppool.name 
+        Stop-IISWebSite $options.websitename
     }
     
     if ($options.backup.enabled)
@@ -120,32 +142,50 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     }
 
     &($options.aftercopy)
+    
+    $setAppPoolIdentity = {
+        param ($apppool)
+        if ($apppool.ContainsKey("username")) {
+            Write-Error "apppool.username is obsolete, use apppool.credentials instead."
+        }
+        
+        if ($apppool.credentials) {
+            Set-IISAppPoolCredentials $apppool.name $apppool.credentials
+        }
+        if ($apppool.identity -eq "NT AUTHORITY\NETWORK SERVICE") {
+            set-apppoolidentityType $apppool.name 2 #2 = NetworkService
+        }
+    }
 
-    set-webapppool $options.apppool.name $options.apppool.executionmode $options.apppool.dotnetversion
-    
-    if ($options.apppool.username)
-    {
-        set-apppoolidentitytouser $options.apppool.name $options.apppool.username $options.apppool.password
+    if ($options.apppool) {
+        set-webapppool $options.apppool.name $options.apppool.executionmode $options.apppool.dotnetversion
+        &$setAppPoolIdentity($options.apppool)
     }
     
-    if ($options.apppool.identity -eq "NT AUTHORITY\NETWORK SERVICE")
-    {
-        set-apppoolidentityType $options.apppool.name 2 #2 = NetworkService
+    if ($options.apppool.idletimeout -ne $null) {
+        Set-IISAppPoolIdleTimeout $options.apppool.name $options.apppool.idletimeout
     }
-    
+
     $firstBinding = $options.bindings[0]
     set-website $options.websitename $options.apppool.name $options.fulldestinationpath $firstBinding.url $firstBinding.protocol $firstBinding.ip $firstBinding.port (!$options.recreatewebsite)
     
-    foreach($binding in $options.bindings)
-    {
-        if($binding.protocol -eq "https")
-        {
-            Set-WebsiteForSsl $binding.useselfsignedcert $options.websitename $binding.certname $binding.ip $binding.port $binding.url        
+    foreach($binding in $options.bindings) {
+        if($binding.protocol -eq "https") {
+            if ($binding.useselfsignedcert) {
+                Write-Host "Set-SelfSignedSslCertificate $($binding.certname)"
+                Set-SelfSignedSslCertificate $binding.certname
+            }
+
+            $sslHost = $(if ($binding.usesni) { $binding.url } else { '*' })
+            Set-IISSslBinding $binding.certname -IP $binding.ip -Port $binding.port -Host $sslHost
         }
-        else
-        {
-            set-websitebinding $options.websitename $binding.url $binding.protocol $binding.ip $binding.port
-        }
+        Set-IISWebSiteBinding `
+            -WebSiteName $options.websitename `
+            -HostHeader $binding.url `
+            -Protocol $binding.protocol `
+            -IPAddress $binding.ip `
+            -Port $binding.port `
+            -UseSni:$($binding.usesni)
     }
     
     if($options.virtualdirectories)
@@ -153,19 +193,31 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
         foreach($virtualdirectory in $options.virtualdirectories)
         {
             write-host "Deploying virtual directory $($virtualdirectory.directoryname) to $($options.websitename)."
-                        
+
             if ($virtualdirectory.fullsourcepath)
             {
                 copy-mirroreddirectory $virtualdirectory.fullsourcepath $virtualdirectory.fulldestinationpath
             }
             
             if ($virtualdirectory.isapplication) {
-                new-webapplication $options.websitename $options.apppool.name $virtualdirectory.directoryname $virtualdirectory.fulldestinationpath
-            } else {
+                $apppool = $virtualdirectory.apppool
+                if ($apppool) {
+                    Set-WebAppPool $apppool.name $apppool.executionmode $apppool.dotnetversion
+                    &$setAppPoolIdentity($apppool)
+                }
+                else {
+                    $apppool = $options.apppool
+                }
+                New-WebApplication $options.websitename $apppool.name $virtualdirectory.directoryname $virtualdirectory.fulldestinationpath -Force
+            }
+            else {
+                if ($virtualdirectory.apppool) {
+                    throw "Cannot use apppool option for directory $($virtualdirectory.directoryname) as it is not an application."
+                }
                 Register-VirtualDirectory $options.websitename $virtualdirectory.directoryname $virtualdirectory.fulldestinationpath
             }
             
-            if ($virtualdirectory.useapppool)
+            if ($virtualdirectory.useapppoolidentity)
             {
                 write-host "Switching virtual directory $($options.websitename)/$($virtualdirectory.directoryname) to use app pool identity for anonymous authentication."
                 set-webproperty "$($options.websitename)/$($virtualdirectory.directoryname)" "/system.WebServer/security/authentication/AnonymousAuthentication" "username" ""
@@ -182,21 +234,29 @@ function Invoke-ComboStandardWebsite([Parameter(Mandatory=$true)][hashtable] $op
     #         set-apppoolstartMode $options.websitename 1
     #     }
     # }
-    
+
+    &($options.beforestart)
+
     if($options.startwebsiteafter)
     {
-        start-apppoolandsite $options.apppool.name $options.websitename
+        Start-IISAppPool $options.apppool.name 
+        Start-IISWebSite $options.websitename
     }
 
     if($options.tryrequestwebsite)
     {
-        $rootUrl = "$($firstBinding.protocol)://$($firstBinding.url):$($firstBinding.port)";
-        Send-HttpRequest GET $rootUrl
-    
-        if($options.virtualdirectories)
+        foreach ($binding in $options.bindings)
         {
-            foreach ($directory in $options.virtualdirectories) {
-                Send-HttpRequest GET "$rootUrl/$($virtualdirectory.directoryname)"
+            $bindingRootUrl = "$($binding.protocol)://$($binding.url):$($binding.port)"
+            $ignoreSslErrors = $binding.useselfsignedcert
+            Send-HttpRequest GET $bindingRootUrl -IgnoreSslErrors:$ignoreSslErrors
+        
+            if($options.virtualdirectories)
+            {
+                foreach ($directory in $options.virtualdirectories)
+                {
+                    Send-HttpRequest GET "$bindingRootUrl/$($virtualdirectory.directoryname)" -IgnoreSslErrors:$ignoreSslErrors
+                }
             }
         }
     }

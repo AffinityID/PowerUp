@@ -94,12 +94,13 @@ function Invoke-Robocopy(
     }) ":")
 
     $filesString = ($files | % { "`"$_`"" }) -Join ' '
-    $command = "$PSScriptRoot\robocopy.exe `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"
+    $command = "&'$PSScriptRoot\robocopy.exe' `"$sourceDirectory`" `"$destinationDirectory`" $filesString $options"
     Write-Host $command
     Invoke-Expression $command
     if ($LastExitCode -ge 8) {
         throw "Robocopy exited with exit code $LastExitCode"
     }
+    $global:LastExitCode = 0
 }
 
 function Write-FileToConsole([string]$fileName)
@@ -130,47 +131,72 @@ function Grant-PathFullControl(
 {
     Write-Host "Granting full control of $path to $user."
     $acl = Get-Acl $path
-    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+    $inheritance = $(if (Test-Path $path -PathType Container) { 'ContainerInherit, ObjectInherit' } else { 'None' })
+
+    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, "FullControl", $inheritance, "None", "Allow")
     $acl.SetAccessRule($rule)
     Set-Acl $path $acl
 }
 
 function Copy-FilteredDirectory(
-	[Parameter(Mandatory=$true)][string] $sourcePath,
-	[Parameter(Mandatory=$true)][string] $destinationPath,
+    [Parameter(Mandatory=$true)][string] $sourcePath,
+    [Parameter(Mandatory=$true)][string] $destinationPath,
     [string[]] $includeFilter,
     [string[]] $excludeFilter
 ) {
     Ensure-Directory $destinationPath
-    $source = Get-Item $sourcePath
+    $sources = Get-Item $sourcePath
+    if (!$sources) {
+        throw "Could not find source path $sourcePath to copy."
+    }
+    
     $destination = Get-Item $destinationPath
+    
+    if (!$includeFilter) {
+        $includeFilter = @("**")
+    }
 
-	Get-ChildItem -Recurse -Path $sourcePath | 
-        Where-Object { Test-ObjectFullName -ObjectFullName $_.FullName -IncludeFilter $includeFilter -ExcludeFilter $excludeFilter } |
-        ForEach-Object {
-            $itemDestination = $_.FullName -replace [regex]::escape($source.FullName), $destination.FullName
-            Copy-Item -Path $_.FullName -Destination $itemDestination
+    $createdDirectories = @()
+    $sources | % {
+        Write-Host "Copying $(Resolve-Path $_.FullName -Relative) => $destinationPath"
+        Get-MatchedPaths -Path $($_.FullName) -Includes $includeFilter -Excludes $excludeFilter | % {    
+            $itemDestination = Join-Path $destination.FullName $_.RelativePath
+            [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($itemDestination)) | Out-Null
+            Copy-Item -Path $_.FullPath -Destination $itemDestination
         }
+    }
 }
 
-function Test-ObjectFullName(
-    [string] $objectFullName,
-    [string[]] $includeFilter,
-    [string[]] $excludeFilter    
+Add-Type -TypeDefinition @"
+    public class PathMatch {
+        public PathMatch(string rootPath, string relativePath, string fullPath) {
+            RootPath = rootPath;
+            RelativePath = relativePath;
+            FullPath = fullPath;
+        }
+        
+        public string RootPath { get; private set; }
+        public string RelativePath { get; private set; }
+        public string FullPath { get; private set; }
+    }
+"@ -Language CSharpVersion3
+function Get-MatchedPaths(
+    [string] $path,
+    [string[]] $includes,
+    [string[]] $excludes
 ) {
-    foreach ($item in $includeFilter) {
-        if ($objectFullName -like $item) {
-            return $true
-        }
+    if ($path -eq '') { $path = '.' }
+    [Reflection.Assembly]::LoadFrom("$PSScriptRoot\Microsoft.Framework.FileSystemGlobbing.dll") | Out-Null
+    $matcher = New-Object Microsoft.Framework.FileSystemGlobbing.Matcher
+    foreach ($include in $includes) { $matcher.AddInclude($include) | Out-Null }
+    foreach ($exclude in $excludes) { $matcher.AddExclude($exclude) | Out-Null }
+    $directory = [IO.DirectoryInfo](Get-Item $path)
+    $directoryWrapper = New-Object Microsoft.Framework.FileSystemGlobbing.Abstractions.DirectoryInfoWrapper $directory
+    
+    $result = $matcher.Execute($directoryWrapper)
+    return $result.Files | % {
+        New-Object PathMatch($path, $_, (Join-Path $path $_))
     }
-
-    foreach ($item in $excludeFilter) {
-        if ($objectFullName -like $item) {
-            return $false
-        }
-    }
-
-    return $true
 }
 
 function Remove-DirectoryFailSafe(
@@ -238,4 +264,5 @@ Export-ModuleMember -Alias * -Function  Write-FileToConsole,
                                         Invoke-Robocopy,
                                         Copy-FilteredDirectory,
                                         Remove-DirectoryFailSafe,
-                                        Reset-Directory
+                                        Reset-Directory,
+                                        Get-MatchedPaths

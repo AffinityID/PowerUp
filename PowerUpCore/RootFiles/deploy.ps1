@@ -6,20 +6,12 @@ $ErrorActionPreference = 'Stop'
 framework '4.0'
 
 task Deploy {
-    Invoke-Task UpdateDatabase
     Invoke-ComboRemotableTask DeployWeb @{
         remote = (Test-Setting execute.remotely -IsTrue)
         servers = ${web.server}
+        share = ${web.server.share}
         workingSubFolder = ${project.name}
-        getServerSettings = $serverSettingsScriptBlock
     }
-}
-
-task UpdateDatabase {
-    Import-Module PowerUpDatabase
-    Invoke-DatabaseMigrations `
-        -assemblyPath "Migrations\Migrations.dll" `
-        -connectionString "${database.connectionString}"
 }
 
 task DeployWeb {
@@ -32,12 +24,6 @@ task DeployWeb {
         bindings = @(@{
             url = ${website.name}
         });
-    }
-    if (Test-Setting website.apppool.username) {
-        $options.apppool = @{
-            username = ${website.apppool.username}
-            password = ${website.apppool.password}
-        };
     }
     
     Invoke-ComboStandardWebsite $options

@@ -1,18 +1,19 @@
 # TODO: standard name (e.g. New-ScheduledTask)
 function Create-ScheduledTask($options) {
     Import-Module PowerUpUtilities
-        
-    $schtasks = "schtasks /Create /TN `"$($options.name)`""
-    if (![string]::IsNullOrEmpty($options.xml))      { $schtasks += " /XML `"$($options.xml)`"" }
-    if (![string]::IsNullOrEmpty($options.path))     { $schtasks += " /TR `"$($options.path) $($options.arguments)`"" }
-    if (![string]::IsNullOrEmpty($options.schedule)) { $schtasks += " /SC `"$($options.schedule)`"" }
-    if (![string]::IsNullOrEmpty($options.days))     { $schtasks += " /D  `"$($options.days)`""  }
-    if (![string]::IsNullOrEmpty($options.time))     { $schtasks += " /ST `"$($options.time)`""  }
-    if (![string]::IsNullOrEmpty($options.username)) { $schtasks += " /RU `"$($options.username)`""  }
-    if (![string]::IsNullOrEmpty($options.password)) { $schtasks += " /RP `"$($options.password)`""  }    
-    if (![string]::IsNullOrEmpty($options.server))   { $schtasks += " /S  `"$($options.server)`"" }
-    
-    Invoke-External $schtasks
+    $arguments = Format-ExternalArguments @{
+      '/TN'  = $options.name
+      '/XML' = $options.xml
+      '/TR'  = "$($options.path) $($options.arguments)"
+      '/SC'  = $options.schedule
+      '/D'   = $options.days
+      '/ST'  = $options.time
+      '/RU'  = $options.username
+      '/RP'  = $options.password
+      '/S'   = $options.server
+    } -EscapeAll
+
+    Invoke-External "schtasks /Create $arguments"
 }
 
 function Update-ScheduledTask ($options) {
@@ -65,7 +66,7 @@ function Test-ScheduledTask([Parameter(Mandatory=$true)] [string] $name) {
     
     Import-Module PowerUpUtilities
     
-    $allTasks = Invoke-External { schtasks /Query /fo csv /v } | ConvertFrom-Csv
+    $allTasks = Invoke-External "schtasks /Query /fo csv /v" | ConvertFrom-Csv
     $task = $allTasks | ? { $_.TaskName -eq "\$name" }
     return ($task -ne $null)
 }

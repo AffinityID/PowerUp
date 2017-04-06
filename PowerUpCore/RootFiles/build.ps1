@@ -12,10 +12,6 @@ properties {
             SourcePath = 'Web'
             PackagePath = 'Web'
             Exclude = $StandardWebExcludes
-        },
-        @{
-            SourcePath = 'Migrations\bin\Release'
-            PackagePath = 'Migrations'
         }
     )
 }

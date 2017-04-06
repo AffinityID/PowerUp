@@ -1,1 +1,0 @@
-Currently those extensions are only used for Get-ParsedSettings -- we could just as well migrate that to raw PowerShell and drop all those dlls.

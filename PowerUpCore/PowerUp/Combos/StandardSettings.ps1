@@ -1,57 +1,25 @@
-$profileSettings = @{};
-$scriptPath = Split-Path -parent $MyInvocation.MyCommand.Definition
-
-function getPlainTextServerSettings($serverName)
-{
-	getPlainTextSettings $serverName servers.txt
-}
-
-function getPlainTextDeploymentProfileSettings($deploymentProfile)
-{
-	getPlainTextSettings $deploymentProfile settings.txt
-}
-
-function getPlainTextSettings($parameter, $fileName)
-{
-	$currentPath = Get-Location
-	$fullFilePath = "$currentPath\$fileName"
-
-	Import-Module $scriptPath\..\Modules\PowerUpSettings\Id.PowershellExtensions.dll
-	
-	if (!(test-path $fullFilePath))
-	{
-		return @()
-	}
-	Write-Host "Processing settings file at $fullFilePath with the following parameter: $parameter"
-	get-parsedsettings $fullFilePath $parameter
-}
-
-function Import-PowerUpProfileSettings() {
+({
+    # Importing profile settings    
     Import-Module PowerUpSettings
 
-    $profileSettings = &$deploymentProfileSettingsScriptBlock ${powerup.profile}
-    if (!$profileSettings)
-    {
-        $profileSettings = @{}
-    }
-    
-    $packageInformation = getPlainTextSettings "PackageInformation" "package.id"
-    if ($packageInformation)
-    {
-        foreach ($item in $packageInformation.GetEnumerator())
-        {
-            $profileSettings.Add($item.Key, $item.Value)
+    $profileSettings = Read-Settings settings.txt ${powerup.profile}  -Raw
+    if (Test-Path "package.id") {
+        # TODO: Do we still use/need this?
+        $packageInformation = Read-Settings "package.id" "PackageInformation" -Raw
+        if ($packageInformation) {
+            $packageInformation.GetEnumerator() | ? { !$_.Key.StartsWith('_') } | % {
+                $profileSettings.Add($_.Key, $_.Value)
+            }
         }
     }
-    
-    Write-Host "Package settings for this profile are:"
-    $profileSettings | Format-Table -property * | Out-String
-    import-settings $profileSettings
-}
 
-tasksetup {
-    Import-PowerUpProfileSettings
-}
+    Import-Settings $profileSettings
+}).Invoke()
 
-$deploymentProfileSettingsScriptBlock = $function:getPlainTextDeploymentProfileSettings
-$serverSettingsScriptBlock = $function:getPlainTextServerSettings
+({
+    Import-Module PowerUpUtilities
+    Set-DynamicVariable 'serverSettingsScriptBlock' -Scope Global -Options Constant -Get {
+        Write-Error "Variable 'serverSettingsScriptBlock' is obsolete and should not be used (note that getServerSettings option is also obsolete, so there is no use case for it anyway)."
+        return {}
+    }
+}).Invoke()

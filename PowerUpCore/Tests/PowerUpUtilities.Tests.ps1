@@ -3,6 +3,14 @@ Import-Module PowerUpUtilities
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
+function EchoArgs([Parameter(Mandatory = $true)][string] $args) {
+    $scriptPath = (Split-Path -Parent $script:MyInvocation.MyCommand.Path)
+    $echoArgs = Resolve-Path (Join-Path $scriptPath 'Tools\EchoArgs.exe')
+    Invoke-Expression "&`"$echoArgs`" $args" |
+        ? { $_ -match '^Arg \d+ is <(.+)>$' } |
+        % { $matches[1] }
+}
+
 Describe 'Wait-Until' {
     Mock Write-Host 
 
@@ -29,6 +37,25 @@ Describe 'Wait-Until' {
           -Timeout (New-TimeSpan -Minutes 10)
 
         $ref.executed | Should Be $true
+    }
+}
+
+Describe 'Format-ExternalEscaped' {
+    @('o`o', 'o''o', 'o"o', 'o`"o', 'o`''o', 'o''"o', 'o`''"o', '`', '''', '"') | % {
+        It "should escape $_ correctly" {
+            $initial = $_
+            $escaped = Format-ExternalEscaped $initial
+            $received = EchoArgs $escaped
+                    
+            $received | Should Be $initial
+        }
+    }
+
+    It "should escape list correctly" {
+        $initial = @('a b', 'c d')
+        $escaped = Format-ExternalEscaped $initial
+
+        $escaped | Should Be '"a b" "c d"'
     }
 }
 

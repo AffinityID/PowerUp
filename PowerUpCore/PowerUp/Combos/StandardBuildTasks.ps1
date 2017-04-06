@@ -1,11 +1,14 @@
+if (${powerup.profile} -eq $null -or ${powerup.profile} -eq '') {
+    ${powerup.profile} = 'Default'
+}
+. .\_powerup\Combos\StandardSettings.ps1
+
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 Import-Module PowerUpUtilities
-Import-Module PowerUpTestRunner
 Import-Module PowerUpFileSystem
 Import-Module PowerUpZip
-Import-Module PowerUpNuGet
 Import-Module TestCombos
 
 $testResultsDirectory = "_testresults"
@@ -13,24 +16,26 @@ $testResultsDirectory = "_testresults"
 properties {
     $Configuration = 'Release'
 
-    $NuGetServers = ('https://nuget.org')
+    $NuGetServerDefault = 'https://api.nuget.org/v3/index.json'
+    $NuGetServers = ($NuGetServerDefault)
     $IntermediateRoot = '_buildtemp'
     $PackageRoot = '_package'
 
-    $MSBuildArgs = ''
+    $MSBuildArgs = '' # Obsolete, do not use
+    $BuildCommandArgs = ''
+    $UseDotnetExe = $false
 
     $TestOptions = @{}
 
     $PackageStucture = @()
     $StandardWebExcludes = @(
-        "*.cs",
+        "**\*.cs",
+        "**\*.resx",
+        "**\Thumbs.db",
         "*.csproj",
-        "*.resx",
-        "*.user"
-        "*Thumbs.db",
-        "*\obj",
-        "*\obj\*",
-        "*\App_Data*"
+        "*.user",
+        "**\obj\**",
+        "**\App_Data\**"
     )
 }
 
@@ -41,26 +46,58 @@ task Clean {
 }
 
 task RestorePackages {
-    Restore-NuGetPackages $NuGetServers
+    if (!$UseDotnetExe) {
+        if (!(Get-Module -ListAvailable -Name PowerUpNuGet)) {
+            Write-Error "PowerUpNuGet module is not found: make sure PowerUp.NuGet package is installed."
+        }
+        Import-Module PowerUpNuGet
+        Restore-NuGetPackages -Sources $NuGetServers
+    }
+    else {
+        $command = "dotnet restore" + ($NuGetServers | % { " --source $_" }) -join ''
+        Invoke-External $command
+    }
 }
 
 task Build {
+    if ($MSBuildArgs -ne '') {
+        Write-Error 'Property $MSBuildArgs is obsolete, please use $BuildArgs instead.'
+    }
+
     Ensure-Directory $IntermediateRoot
-    $MSBuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=$Configuration") + $MSBuildArgs
-    Invoke-External msbuild $MSBuildArgsFull
+    
+    if (!$UseDotnetExe) {
+        $BuildArgsFull = @("/Target:Rebuild", "/Property:Configuration=$Configuration") + $BuildCommandArgs
+        Invoke-External "msbuild $($BuildArgsFull -join ' ')"
+    }
+    else {
+        $BuildArgsFull = @("--configuration $Configuration") + $BuildCommandArgs
+        Invoke-External "dotnet build $($BuildArgsFull -join ' ')"
+    }
 }
 
 task Test {
-    Merge-Defaults $TestOptions @{
-        default = @{
-            rootpath = 'Tests'
-        }
-        nunit = @{
-            filefilter = '*Tests*.dll'
-            pathfilter = "bin\$Configuration"
+    $defaults = @{
+        nunit = @{ paths = @( "**\bin\$Configuration\*Tests*.dll" ) }
+    }
+    if ($UseDotnetExe) {
+        $defaults = @{
+            dotnet = @{
+                paths = @("**\*Tests*.csproj")
+                configuration = $Configuration
+            }
         }
     }
+
+    Merge-Defaults $TestOptions $defaults
     Invoke-ComboTests $TestOptions
+}
+
+task Publish {
+    if (!$UseDotnetExe) {
+        Write-Error "Publish is supported only for projects using dotnet CLI at the moment."
+    }
+    Invoke-External "dotnet publish --configuration $Configuration"
 }
 
 task Package {
@@ -74,11 +111,12 @@ task Package {
             -Mirror -CopyDirectories `
             -NoFileSize -NoProgress -NoDirectoryList -NoJobHeader -NoJobSummary
     }
+    Copy-Item .\powerup.bat .\$PackageRoot
     Copy-Item .\deploy.ps1 .\$PackageRoot
     Copy-Item .\settings.txt .\$PackageRoot
     
     if (Test-Path .\servers.txt) {
-        Copy-Item .\servers.txt .\$PackageRoot
+        Write-Error "File servers.txt is obsolete and should be removed."
     }
     CreatePackageIdFile ".\$PackageRoot"
     $zip = ".\$PackageRoot\package_${build.number}.zip"

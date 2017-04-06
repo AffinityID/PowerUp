@@ -1,7 +1,63 @@
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-function Merge-Defaults($target, $defaults) {
+Add-Type @"
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Management.Automation;
+
+public class PowerUpDynamicVariable : PSVariable {
+    private readonly ScriptBlock _getter;
+    private readonly ScriptBlock _setter;
+    
+    public PowerUpDynamicVariable(string name, ScriptBlock getter, ScriptBlock setter, ScopedItemOptions options)
+        : base(name, null, options)
+    {
+        _getter = getter;
+        _setter = setter;
+    }
+
+    public override object Value {
+        get {
+            if (_getter == null)
+                throw new NotSupportedException("Dynamic variable " + Name + " has no get block and so can't be read.");
+        
+            Collection<PSObject> results = _getter.Invoke();
+            if (results.Count == 1) {
+                return results[0];
+            }
+            else {
+                PSObject[] returnResults = new PSObject[results.Count];
+                results.CopyTo(returnResults, 0);
+                return returnResults;
+            }
+        }
+        set {
+            if (_setter == null)
+                throw new NotSupportedException("Dynamic variable " + Name + " has no set block and so can't be set.");
+        
+            _setter.Invoke(value);
+        }
+    }
+}
+"@
+
+function Set-DynamicVariable(
+    [Parameter(Mandatory=$true)] [string] $name,
+    [ScriptBlock] $get = $null,
+    [ScriptBlock] $set = $null,
+    [Management.Automation.ScopedItemOptions] $options = [Management.Automation.ScopedItemOptions]::None,
+    [string] $scope = 'Local'
+) {
+    $variable = New-Object PowerUpDynamicVariable("$($scope):$name",$get,$set,$options)
+    $ExecutionContext.SessionState.PSVariable.Set($variable)
+}
+
+function Merge-Defaults(
+    [Parameter(Mandatory=$true)] [Hashtable] $target,
+    [Parameter(Mandatory=$true)] [Hashtable] $defaults
+) {
     $orderedDefaults = $defaults.GetEnumerator()
     if ($defaults.ContainsKey("[ordered]")) {
         # Sort-Object here is a hack. PowerShell 2 does not provide [ordered],
@@ -15,28 +71,32 @@ function Merge-Defaults($target, $defaults) {
         if ($key -eq '[ordered]') {
             return
         }
-        
-        try {    
+
+        try {
             # The comma in else is important (in PowerShell 2 at least), see http://stackoverflow.com/a/18477004/39068
             $newValueBlock = if ($_.Value -is [ScriptBlock]) { $_.Value } else { {,$_.Value} }
-            
+
             if ($target.ContainsKey($key)) {
                 $oldValue = $target[$key];
                 if ($oldValue -is [Hashtable]) {
-                    Merge-Defaults $oldValue (&$newValueBlock)
+                    $newValue = &$newValueBlock
+                    if ($newValue -is [Hashtable]) {
+                        Merge-Defaults $oldValue $newValue
+                    }
+
                     return
                 }
-                
+
                 return
             }
-             
+
             $newValue = &$newValueBlock 
             if ($newValue -is [Hashtable]) {
                 $newValueNoInnerBlocks = @{};
                 Merge-Defaults $newValueNoInnerBlocks $newValue
                 $newValue = $newValueNoInnerBlocks
             }
-            
+
             $target[$key] = $newValue;
         }
         catch {
@@ -70,37 +130,20 @@ function Use-Object(
 }
 
 function Invoke-External {
-    [CmdletBinding()]
-    param ([parameter(Mandatory=$true, ValueFromRemainingArguments=$true)] $command)
-    
-    if ($command -is [Collections.IEnumerable] -and $command -isnot [string]) {
-        $command = @($command | % { $_ })
-        if (($command | measure).Count -eq 1) {
-            $command = $command[0]
-        }
-        elseif (!($command | ? { $_ -isnot [string] })) {
-            $command = $command -join ' '
-        }
-        else {
-            $commandsWithTypes = ($command | % { "[$($_.GetType())] $_" }) -join ', '
-            throw "Unsupported command list: ($commandsWithTypes)"
-        }
-    }
+    [CmdletBinding()] # allows -ErrorAction
+    param (
+        [Parameter(Mandatory=$true)] [string] $command,
+        [string[]] $secrets
+    )
 
-    Write-Host $command
-    if ($command -is [string]) {
-        $command += " 2>&1"
-        Invoke-Expression $command
+    $log = $command
+    foreach ($secret in $secrets) {
+        $log = $log.Replace($secret, '<secret>')
     }
-    elseif ($command -is [ScriptBlock]) {
-        $command.Invoke();
-    }
-    else {
-        throw "Unsupported command type: " + $command.GetType()
-    }
-    
+    Write-Host $log
+    Invoke-Expression $command
     if ($LastExitCode -ne 0) {
-        Write-Error "$command failed with exit code $LastExitCode"
+        Write-Error "$log failed with exit code $LastExitCode"
     }
 }
 
@@ -134,13 +177,17 @@ function Format-ExternalArguments(
 }
 
 function Format-ExternalEscaped(
-    [Parameter(Mandatory=$true)] [string] $argument
+    [object] $argument
 ) {
     if ($argument -eq $null -or $argument -eq '') {
         return $argument
     }
-    
-    if ($argument.Contains('"')) {
+
+    if ($argument -is [Collections.IEnumerable] -and $argument -isnot [string]) {
+        return ($argument.GetEnumerator() | % { Format-ExternalEscaped $_ }) -join ' '
+    }
+   
+    if ($argument -match '[`"]') {
         return "'$($argument.Replace('"', '\"').Replace("'", "''"))'"
         # " # this comment is just a highlighting fix for notepad 2
     }
@@ -184,10 +231,11 @@ function Get-RealException(
     return $result
 }
 
-Export-ModuleMember -function Merge-Defaults,
-                              Use-Object,
-                              Invoke-External,
-                              Format-ExternalArguments,
-                              Format-ExternalEscaped,
-                              Wait-Until,
-                              Get-RealException
+Export-ModuleMember -function Set-DynamicVariable,
+                               Merge-Defaults,
+                               Use-Object,
+                               Invoke-External,
+                               Format-ExternalArguments,
+                               Format-ExternalEscaped,
+                               Wait-Until,
+                               Get-RealException

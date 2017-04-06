@@ -11,6 +11,7 @@
     <releaseNotes />
     <copyright />
     <tags>Deployment PowerShell PSake Svn</tags>
+    <developmentDependency>true</developmentDependency>
     <dependencies>
       <dependency id="AffinityID.PowerUp" />
     </dependencies>

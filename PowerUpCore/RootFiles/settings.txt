@@ -10,11 +10,13 @@ Local
     execute.remotely                    false
     domain.suffix                       local
     web.server                          localhost
+    web.server.share                    Deployments
     database.server                     localhost
     website.deployment.folder.root      c:\WebApps
 
 Development
     domain.suffix                       dev
     web.server                          someserver
+    web.server.share                    Deployments
     database.server                     someserver
     website.deployment.folder.root      x:\WebApps

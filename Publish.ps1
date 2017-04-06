@@ -3,18 +3,38 @@ param(
     [string] $buildNumber = 0,
     [string] $outputPath = ".\_output"
 )
-$version = "0.9.$buildNumber"
+
+Set-StrictMode -Version 2
+$ErrorActionPreference = 'Stop'
+
+$version = "0.$buildNumber"
+
+.\PrepareAll.ps1
 
 if (Test-Path $outputPath) {
     Remove-Item -Recurse $outputPath
 }
 
-$env:PSModulePath += ";.\PowerUpCore\PowerUp\Modules\"
 Import-Module PowerUpFileSystem
 Import-Module PowerUpNuGet
 
-@('PowerUpCore', 'PowerUpSvn', 'PowerUpJsonFallback') | % {
-    Invoke-Robocopy .\$_ .\_output\$_ -Mirror -NoFileList -NoDirectoryList -NoJobHeader -NoJobSummary
+@(
+    'PowerUpCore',
+    'PowerUpFluentMigrator',
+    'PowerUpFtp',
+    'PowerUpIIS',
+    'PowerUpJsonFallback',
+    'PowerUpNuGet',
+    'PowerUpNUnit',
+    'PowerUpPester',
+    'PowerUpSql',
+    'PowerUpSqlServer',
+    'PowerUpSvn'
+) | % {
+    Write-Host $_ -ForegroundColor White
+    Invoke-Robocopy .\$_ .\_output\$_ -Mirror `
+        -ExcludeDirectories @('_*') -ExcludeFiles @('packages.config', 'Prepare.ps1') `
+        -NoFileList -NoDirectoryList -NoJobHeader -NoJobSummary
     New-NuGetPackage ".\_output\$_\Package.nuspec" ".\_output" -Version $version -NoPackageAnalysis -NoDefaultExcludes
 }
 
