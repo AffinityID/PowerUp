@@ -3,10 +3,10 @@ $ErrorActionPreference = 'Stop'
 
 function Set-ServiceCredentials(
     [Parameter(Mandatory=$true)] [string] $name,
-    [Parameter(Mandatory=$true)] [PSCredential] $credentials
+    [Parameter(Mandatory=$true)] [Management.Automation.PSCredential] $credentials
 )
 {
-    $username = $credentials.UserName    
+    $username = $credentials.UserName
     if (!$username.Contains("\")) {
         $username = "$env:COMPUTERNAME\$\username"
     }
@@ -19,7 +19,7 @@ function Set-ServiceCredentials(
     Write-Output "Setting credentials for service '$Name' to '$username'"
     $params = $service.PSBase.GetMethodParameters("Change")
     $params["StartName"] = $username
-    $params["StartPassword"] = (New-Object Net.NetworkCredential('', $credentials.Password)).Password
+    $params["StartPassword"] = $credentials.GetNetworkCredential().Password
 
     $service.InvokeMethod("Change", $params, $null) | Out-Null
 }

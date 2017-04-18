@@ -133,7 +133,7 @@ function Invoke-External {
     [CmdletBinding()] # allows -ErrorAction
     param (
         [Parameter(Mandatory=$true)] [string] $command,
-        [string[]] $secrets
+        [string[]] $secrets = @()
     )
 
     $log = $command
